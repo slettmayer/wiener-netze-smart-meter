@@ -1,0 +1,17 @@
+{
+    "title": "Einrichtung des Wiener Smart Meter",
+    "config": {
+        "step": {
+            "user": {
+                "title": "Einrichtung des Wiener Smart Meter",
+                "data": {
+                    "GP": "Benutzer (Geschäftspartner) z.B. '120305XXXX'",
+                    "DEVICE": "Gerätenummer des Smart Meters (Zählpunktnummer) z.B. 'AT001000000000000000100001519XXXX'",
+                    "TOKEN": "KEYCLOAK_IDENTITY Cookie - Besuchen Sie https://smartmeter-web.wienernetze.at/ und kopieren Sie das Cookie aus den Entwicklertools",
+                    "INTERVAL": "Aktualisierungsrate in Minuten",
+                    "15MIN_ENABLED": "Haben Sie den optionalen 15-Minuten-Zeitrahmen in Ihrer Smart Meter-Konfiguration aktiviert?"
+                }
+            }
+        }
+    }
+}
