@@ -104,6 +104,7 @@ class SmartMeterDataCoordinator(DataUpdateCoordinator):
         
             response = await self.hass.async_add_executor_job(_execute_request)
             self._access_token = response.json().get("access_token")
+            _LOGGER.info(self._access_token)
         except Exception as e:
             raise UpdateFailed(f"Error getting access token: {e}")
 
@@ -128,14 +129,12 @@ class SmartMeterDataCoordinator(DataUpdateCoordinator):
             
 
             response = await self.hass.async_add_executor_job(_execute_data_request)
+            _LOGGER.info(response.json())
             self._data["history"] = response.json().get("values")
 
         except Exception as e:
             raise UpdateFailed(f"Error getting power consumption data: {e}")
 
-        if not self._data["history"]:
-            raise UpdateFailed("Failed to obtain power consumption data.")
-        
     async def _get_meter_reading_data(self):
         try:
             def _execute_data_request():
@@ -147,14 +146,12 @@ class SmartMeterDataCoordinator(DataUpdateCoordinator):
             
 
             response = await self.hass.async_add_executor_job(_execute_data_request)
+            _LOGGER.info(response.json())
             self._data["meterReadings"] = response.json().get("meterReadings")[0]
 
         except Exception as e:
             raise UpdateFailed(f"Error getting meterReadings data: {e}")
 
-        if not self._data["meterReadings"]:
-            raise UpdateFailed("Failed to obtain meterReadings data.")
-        
     async def _get_consumption_data(self):
         try:
             def _execute_data_request():
@@ -166,14 +163,13 @@ class SmartMeterDataCoordinator(DataUpdateCoordinator):
             
 
             response = await self.hass.async_add_executor_job(_execute_data_request)
+            _LOGGER.info(response.json())
             self._data["consumptionYesterday"] = response.json().get("consumptionYesterday")
             self._data["consumptionDayBeforeYesterday"] = response.json().get("consumptionDayBeforeYesterday")
 
         except Exception as e:
             raise UpdateFailed(f"Error getting consumption data: {e}")
 
-        if not self._data["consumptionYesterday"]:
-            raise UpdateFailed("Failed to obtain consumption data.")
         
 
 
@@ -187,7 +183,7 @@ class SmartMeterSensor(Entity):
         self._coordinator = coordinator
         self._name = name
         self._id = id
-        self._data_keword = data_keyword
+        self._data_keyword = data_keyword
 
 
     @property
@@ -222,7 +218,7 @@ class SmartMeterSensor(Entity):
     async def async_update(self):
         """Fetch new state data for the sensor."""
         await self._coordinator.async_request_refresh()
-        data = self._coordinator._data[self._data_keword]
+        data = self._coordinator._data[self._data_keyword]
         if not data:
             return
 
