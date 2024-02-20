@@ -11,6 +11,7 @@ from homeassistant.const import DEVICE_CLASS_POWER
 
 
 _LOGGER = logging.getLogger(__name__)
+SCAN_INTERVAL = timedelta(minutes=60)
 
 
 async def async_setup_entry(hass, entry, async_add_entities):
@@ -42,12 +43,13 @@ class SmartMeterDataCoordinator(DataUpdateCoordinator):
         self._user = user
         self._device = device
         self._role = "V002" if extraSmallIntervalEnabled else "V001"
+        SCAN_INTERVAL=self._interval
 
         super().__init__(
             hass,
             _LOGGER,
             name=DOMAIN,
-            update_interval=timedelta(minutes=interval),
+            update_interval=SCAN_INTERVAL,
         )
 
     async def _async_update_data(self):
@@ -104,7 +106,7 @@ class SmartMeterDataCoordinator(DataUpdateCoordinator):
         
             response = await self.hass.async_add_executor_job(_execute_request)
             self._access_token = response.json().get("access_token")
-            _LOGGER.info(self._access_token)
+            _LOGGER.debug(self._access_token)
         except Exception as e:
             raise UpdateFailed(f"Error getting access token: {e}")
 
@@ -129,7 +131,7 @@ class SmartMeterDataCoordinator(DataUpdateCoordinator):
             
 
             response = await self.hass.async_add_executor_job(_execute_data_request)
-            _LOGGER.info(response.json())
+            _LOGGER.debug(response.json())
             self._data["history"] = response.json().get("values")
 
         except Exception as e:
@@ -146,7 +148,7 @@ class SmartMeterDataCoordinator(DataUpdateCoordinator):
             
 
             response = await self.hass.async_add_executor_job(_execute_data_request)
-            _LOGGER.info(response.json())
+            _LOGGER.debug(response.json())
             self._data["meterReadings"] = response.json().get("meterReadings")[0]
 
         except Exception as e:
@@ -163,7 +165,7 @@ class SmartMeterDataCoordinator(DataUpdateCoordinator):
             
 
             response = await self.hass.async_add_executor_job(_execute_data_request)
-            _LOGGER.info(response.json())
+            _LOGGER.debug(response.json())
             self._data["consumptionYesterday"] = response.json().get("consumptionYesterday")
             self._data["consumptionDayBeforeYesterday"] = response.json().get("consumptionDayBeforeYesterday")
 
