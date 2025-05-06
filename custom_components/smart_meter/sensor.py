@@ -1,12 +1,11 @@
 import logging
-from datetime import timedelta
 import requests
 from .const import *
 from datetime import datetime, timedelta
 
 from homeassistant.helpers.entity import Entity
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
-from homeassistant.const import DEVICE_CLASS_POWER
+from homeassistant.components.sensor import SensorDeviceClass
 
 _LOGGER = logging.getLogger(__name__)
 SCAN_INTERVAL = timedelta(minutes=60)
@@ -219,7 +218,7 @@ class SmartMeterSensor(Entity):
     @property
     def device_class(self):
         """Return the device class."""
-        return DEVICE_CLASS_POWER
+        return SensorDeviceClass.POWER
 
     async def async_update(self):
         """Fetch new state data for the sensor."""
