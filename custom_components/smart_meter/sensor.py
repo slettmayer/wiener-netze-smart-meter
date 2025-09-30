@@ -1,11 +1,17 @@
 import logging
 import requests
+import base64
+import hashlib
+import os
 from .const import *
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
+from collections import defaultdict
 
 from homeassistant.helpers.entity import Entity
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 from homeassistant.components.sensor import SensorDeviceClass
+from homeassistant.components.recorder.models import StatisticData, StatisticMetaData
+from homeassistant.components.recorder.statistics import async_add_external_statistics
 
 _LOGGER = logging.getLogger(__name__)
 SCAN_INTERVAL = timedelta(minutes=60)
@@ -19,20 +25,14 @@ async def async_setup_entry(hass, entry, async_add_entities):
     device = entry.data["DEVICE"]
     extraSmallIntervalEnabled = entry.data["15MIN_ENABLED"]
 
-    # Create and initialize the SmartMeterDataCoordinator
     coordinator = SmartMeterDataCoordinator(
         hass, token, interval, user, device, extraSmallIntervalEnabled
     )
 
-    # Fetch initial data from the coordinator
     await coordinator.async_config_entry_first_refresh()
 
-    # Add SmartMeterSensor entities
     async_add_entities([
-        SmartMeterSensor(coordinator, "Smart Meter History", "smart_meter.history", "history"),
-        SmartMeterSensor(coordinator, "Smart Meter Reading", "smart_meter.readings", "meterReadings"),
-        SmartMeterSensor(coordinator, "Smart Meter Consumption Yesterday", "smart_meter.consumption_yesterday", "consumptionYesterday"),
-        SmartMeterSensor(coordinator, "Smart Meter Consumption Day before Yesterday", "smart_meter.consumption_day_before_yesterday", "consumptionDayBeforeYesterday")
+        SmartMeterSensor(coordinator, "Smart Meter Reading", "smart_meter.readings", "meterReadings")
     ], True)
 
 
@@ -40,7 +40,6 @@ class SmartMeterDataCoordinator(DataUpdateCoordinator):
     """Class to manage fetching smart meter data."""
 
     def __init__(self, hass, token, interval, user, device, extraSmallIntervalEnabled):
-        """Initialize SmartMeterDataCoordinator."""
         self._token = token
         self._interval = timedelta(minutes=interval)
         self._access_token = None
@@ -57,42 +56,59 @@ class SmartMeterDataCoordinator(DataUpdateCoordinator):
             update_interval=SCAN_INTERVAL,
         )
 
+    def generate_code_verifier(self):
+        verifier = base64.urlsafe_b64encode(os.urandom(64)).decode("utf-8")
+        return verifier.rstrip("=")
+
+    def generate_code_challenge(self, verifier):
+        digest = hashlib.sha256(verifier.encode("utf-8")).digest()
+        challenge = base64.urlsafe_b64encode(digest).decode("utf-8")
+        return challenge.rstrip("=")
+
     async def _async_update_data(self):
-        """Fetch the latest data from the API."""
         await self._get_access_token()
         if self._access_token:
-            await self._get_consumption_history_data()
-            await self._get_consumption_data()
             await self._get_meter_reading_data()
+            await self._get_consumption_history_data()
 
     async def _get_access_token(self):
-        """Obtain the access token."""
         code = None
+        code_verifier = self.generate_code_verifier()
+        code_challenge = self.generate_code_challenge(code_verifier)
+
         try:
             def execute_request():
-                auth_url = AUTHORIZATION_ENDPOINT
                 auth_params = {
                     "client_id": CLIENT_ID,
                     "redirect_uri": ALLOWED_REDIRECT_URL,
-                    "state": "9c3aa679-9415-4925-883d-4ea46fde391b",
+                    "state": "static-state",
                     "response_mode": "fragment",
                     "response_type": "code",
                     "scope": "openid",
-                    "nonce": "c5016118-667d-4788-8856-2b67cfc95399",
-                    "prompt": "none"
+                    "nonce": "static-nonce",
+                    "prompt": "none",
+                    "code_challenge_method": "S256",
+                    "code_challenge": code_challenge,
                 }
                 auth_cookies = {"KEYCLOAK_IDENTITY": self._token}
                 session = requests.session()
-                return session.get(auth_url, params=auth_params, cookies=auth_cookies, allow_redirects=False)
+                _LOGGER.debug(f"[AUTH REQUEST] URL={AUTHORIZATION_ENDPOINT} PARAMS={auth_params} COOKIES={auth_cookies}")
+                resp = session.get(
+                    AUTHORIZATION_ENDPOINT,
+                    params=auth_params,
+                    cookies=auth_cookies,
+                    allow_redirects=False,
+                )
+                _LOGGER.debug(f"[AUTH RESPONSE] STATUS={resp.status_code} HEADERS={resp.headers} BODY={resp.text}")
+                return resp
 
             response = await self.hass.async_add_executor_job(execute_request)
-
             if not response.headers.get("location"):
-                _LOGGER.error(response.headers)
-                raise UpdateFailed(f"Error getting code from authorization call!")
-
+                raise UpdateFailed("Error getting code from authorization call!")
             code = response.headers.get("location").split("code=")[1]
+            _LOGGER.debug(f"[AUTH SUCCESS] CODE={code}")
         except Exception as e:
+            _LOGGER.exception("Exception during auth request")
             raise UpdateFailed(f"Error getting access token: {e}")
 
         if not code:
@@ -100,27 +116,31 @@ class SmartMeterDataCoordinator(DataUpdateCoordinator):
 
         try:
             def _execute_request():
-                token_url = TOKEN_ENDPOINT
                 token_payload = {
                     "code": code,
                     "grant_type": "authorization_code",
                     "client_id": CLIENT_ID,
-                    "redirect_uri": ALLOWED_REDIRECT_URL
+                    "redirect_uri": ALLOWED_REDIRECT_URL,
+                    "code_verifier": code_verifier,
                 }
                 session = requests.session()
-                return session.post(token_url, data=token_payload)
+                _LOGGER.debug(f"[TOKEN REQUEST] URL={TOKEN_ENDPOINT} DATA={token_payload}")
+                resp = session.post(TOKEN_ENDPOINT, data=token_payload)
+                _LOGGER.debug(f"[TOKEN RESPONSE] STATUS={resp.status_code} BODY={resp.text}")
+                return resp
 
             response = await self.hass.async_add_executor_job(_execute_request)
             self._access_token = response.json().get("access_token")
-            _LOGGER.debug(self._access_token)
+            _LOGGER.debug(f"[TOKEN SUCCESS] ACCESS_TOKEN={self._access_token}")
         except Exception as e:
+            _LOGGER.exception("Exception during token request")
             raise UpdateFailed(f"Error getting access token: {e}")
 
         if not self._access_token:
             raise UpdateFailed("Failed to obtain access token from token call.")
 
     async def _get_consumption_history_data(self):
-        """Fetch consumption history data."""
+        """Fetch 15-min consumption data, aggregate hourly, and insert into HA statistics."""
         try:
             def _execute_data_request():
                 api_url = "https://service.wienernetze.at/sm/api/user/messwerte/bewegungsdaten"
@@ -130,61 +150,82 @@ class SmartMeterDataCoordinator(DataUpdateCoordinator):
                     "zaehlpunktnummer": self._device,
                     "rolle": self._role,
                     "zeitpunktBis": datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S.000Z"),
-                    "zeitpunktVon": (datetime.utcnow() - timedelta(days=2)).strftime("%Y-%m-%dT%H:%M:%S.000Z"),
+                    "zeitpunktVon": (datetime.utcnow() - timedelta(days=14)).strftime("%Y-%m-%dT%H:%M:%S.000Z"),
                     "aggregat": "NONE"
                 }
                 session = requests.session()
-                return session.get(api_url, headers=headers, params=params)
+                _LOGGER.debug(f"[BEWEGUNGSDATEN REQUEST] URL={api_url} HEADERS={headers} PARAMS={params}")
+                resp = session.get(api_url, headers=headers, params=params)
+                _LOGGER.debug(f"[BEWEGUNGSDATEN RESPONSE] STATUS={resp.status_code} BODY={resp.text}")
+                return resp
 
             response = await self.hass.async_add_executor_job(_execute_data_request)
-            _LOGGER.debug(response.json())
-            self._data["history"] = response.json().get("values")
+            values = response.json().get("values", [])
+
+            if values:
+                metadata = StatisticMetaData(
+                    has_mean=False,
+                    has_sum=True,
+                    name="Smart Meter Verbrauch",
+                    source="smart_meter",
+                    statistic_id="smart_meter:consumption",
+                    unit_of_measurement="kWh",
+                )
+
+                # Hourly aggregation
+                hourly = defaultdict(float)
+                for v in values:
+                    if "wert" not in v or "zeitpunktVon" not in v:
+                        continue
+                    ts = datetime.fromisoformat(v["zeitpunktVon"].replace("Z", "+00:00")).astimezone(timezone.utc)
+                    ts_hour = ts.replace(minute=0, second=0, microsecond=0)
+                    hourly[ts_hour] += float(v["wert"])
+
+                # Debug: Ausgabe der aggregierten Stundenwerte
+                for hour, value in sorted(hourly.items()):
+                    _LOGGER.debug(f"[HOURLY AGGREGATION] Hour={hour} Sum={value:.3f} kWh")
+
+                stats = [StatisticData(start=dt, sum=value) for dt, value in hourly.items()]
+
+                if stats:
+                    async_add_external_statistics(self.hass, metadata, stats)
+                    _LOGGER.debug(f"[BEWEGUNGSDATEN SUCCESS] Inserted {len(stats)} hourly values")
 
         except Exception as e:
+            _LOGGER.exception("Exception fetching Bewegungsdaten")
             raise UpdateFailed(f"Error getting power consumption data: {e}")
 
     async def _get_meter_reading_data(self):
-        """Fetch meter reading data."""
+        """Fetch meter reading data for sensor state."""
         try:
             def _execute_data_request():
-                api_url = "https://api.wstw.at/gateway/WN_SMART_METER_PORTAL_API_B2C/1.0/zaehlpunkt/meterReadings"
-                headers = {"Authorization": f"Bearer {self._access_token}",
-                           "X-Gateway-Apikey": "afb0be74-6455-44f5-a34d-6994223020ba"}
+                api_url = (
+                        "https://service.wienernetze.at/sm/api/user/messwerte/meterReading/"
+                        + self._user + "/" + self._device
+                        + "?datetimeFrom=" + (datetime.utcnow() - timedelta(days=2)).strftime("%Y-%m-%dT%H:%M:%S.000Z")
+                        + "&datetimeTo=" + datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S.000Z")
+                )
+                headers = {"Authorization": f"Bearer {self._access_token}"}
                 session = requests.session()
-                return session.get(api_url, headers=headers)
+                _LOGGER.debug(f"[METERREADING REQUEST] URL={api_url} HEADERS={headers}")
+                resp = session.get(api_url, headers=headers)
+                _LOGGER.debug(f"[METERREADING RESPONSE] STATUS={resp.status_code} BODY={resp.text}")
+                return resp
 
             response = await self.hass.async_add_executor_job(_execute_data_request)
-            _LOGGER.debug(response.json())
-            self._data["meterReadings"] = response.json().get("meterReadings")[0]
+            self._data["meterReadings"] = response.json().get("zaehlwerke", [])[0].get("messwerte", [])
+            _LOGGER.debug(f"[METERREADING SUCCESS] Retrieved {len(self._data['meterReadings'])} values")
 
         except Exception as e:
+            _LOGGER.exception("Exception fetching MeterReadings")
             raise UpdateFailed(f"Error getting meterReadings data: {e}")
-
-    async def _get_consumption_data(self):
-        """Fetch consumption data."""
-        try:
-            def _execute_data_request():
-                api_url = "https://api.wstw.at/gateway/WN_SMART_METER_PORTAL_API_B2C/1.0/zaehlpunkt/consumptions"
-                headers = {"Authorization": f"Bearer {self._access_token}",
-                           "X-Gateway-Apikey": "afb0be74-6455-44f5-a34d-6994223020ba"}
-                session = requests.session()
-                return session.get(api_url, headers=headers)
-
-            response = await self.hass.async_add_executor_job(_execute_data_request)
-            _LOGGER.debug(response.json())
-            self._data["consumptionYesterday"] = response.json().get("consumptionYesterday")
-            self._data["consumptionDayBeforeYesterday"] = response.json().get("consumptionDayBeforeYesterday")
-
-        except Exception as e:
-            raise UpdateFailed(f"Error getting consumption data: {e}")
 
 
 class SmartMeterSensor(Entity):
     """Representation of the smart meter sensor."""
 
     def __init__(self, coordinator, name, id, data_keyword):
-        """Initialize the sensor."""
-        self._unit_of_measurement = "KWH"
+        self._unit_of_measurement = "kWh"
         self._state = None
         self._coordinator = coordinator
         self._name = name
@@ -193,7 +234,6 @@ class SmartMeterSensor(Entity):
 
     @property
     def name(self):
-        """Return the name of the sensor."""
         return self._name
 
     @property
@@ -202,35 +242,26 @@ class SmartMeterSensor(Entity):
 
     @property
     def state(self):
-        """Return the state of the sensor."""
         return self._state
 
     @property
     def unit_of_measurement(self):
-        """Return the unit of measurement."""
         return self._unit_of_measurement
 
     @property
     def icon(self):
-        """Return the icon to use for the device."""
         return "mdi:flash"
 
     @property
     def device_class(self):
-        """Return the device class."""
-        return SensorDeviceClass.POWER
+        return SensorDeviceClass.ENERGY
 
     async def async_update(self):
-        """Fetch new state data for the sensor."""
         await self._coordinator.async_request_refresh()
         data = self._coordinator._data.get(self._data_keyword)
-        if data is None:
-            _LOGGER.warning(f"No data available for {self._name}")
-            return
 
-        if isinstance(data, list):
-            self._state = float(data[0]["wert"])  # Adjust based on actual data structure
-        elif isinstance(data, dict):
-            self._state = int(data["value"]) / 1000  # Assuming "value" is in Wh
-        else:
-            self._state = None
+        if isinstance(data, list) and len(data) > 0:
+            if "messwert" in data[-1]:
+                self._state = float(data[-1]["messwert"])
+            elif "wert" in data[-1]:
+                self._state = float(data[-1]["wert"])
