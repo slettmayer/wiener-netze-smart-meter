@@ -9,6 +9,7 @@
                     "DEVICE": "Gerätenummer des Smart Meters (Zählpunktnummer) z.B. 'AT001000000000000000100001519XXXX'",
                     "TOKEN": "KEYCLOAK_IDENTITY Cookie - Besuchen Sie https://smartmeter-web.wienernetze.at/ und kopieren Sie das Cookie aus den Entwicklertools",
                     "INTERVAL": "Aktualisierungsrate in Minuten",
+                    "IMPORT_DAYS": "Anzahl der vergangenen Tage die zu beginn der Integration importiert werden sollen.",
                     "15MIN_ENABLED": "Haben Sie den optionalen 15-Minuten-Zeitrahmen in Ihrer Smart Meter-Konfiguration aktiviert?"
                 }
             }

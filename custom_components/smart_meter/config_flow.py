@@ -18,6 +18,7 @@ class SmartMeterConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 vol.Required("DEVICE", default="AT001000000000000000100001519XXXX"): str,
                 vol.Required("TOKEN", default="Visit https://smartmeter-web.wienernetze.at/, copy 'KEYCLOAK_IDENTITY' cookie from developer tools"): str,
                 vol.Required("INTERVAL", default=60): int,
-                vol.Required("15MIN_ENABLED", default=False): bool
+                vol.Required("IMPORT_DAYS", default=90): int,
+                vol.Required("15MIN_ENABLED", default=True): bool
             })
         )
