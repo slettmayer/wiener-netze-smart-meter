@@ -34,7 +34,7 @@ async def async_setup_entry(hass, entry, async_add_entities):
     await coordinator.async_config_entry_first_refresh()
 
     async_add_entities([
-        SmartMeterSensor(coordinator, "Smart Meter Reading", "smart_meter.readings", "meterReadings")
+        SmartMeterSensor(coordinator, f"Smart Meter Reading {device}", f"smart_meter.readings_{device}", "meterReadings")
     ], True)
 
 
@@ -242,7 +242,7 @@ class SmartMeterDataCoordinator(DataUpdateCoordinator):
             has_sum=True,
             name=name,
             source=DOMAIN,
-            statistic_id=f"{DOMAIN}:{stat_id}",
+            statistic_id=f"{DOMAIN}:{stat_id}_{self._device}".lower(),
             unit_of_measurement="kWh",
         )
 
