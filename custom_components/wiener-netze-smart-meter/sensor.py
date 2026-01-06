@@ -19,7 +19,7 @@ SCAN_INTERVAL = timedelta(minutes=60)
 
 
 async def async_setup_entry(hass, entry, async_add_entities):
-    """Set up the smart_meter sensor platform."""
+    """Set up the wiener-netze-smart-meter sensor platform."""
     token = entry.data["TOKEN"]
     interval = entry.data["INTERVAL"]
     user = entry.data["GP"]
@@ -34,7 +34,7 @@ async def async_setup_entry(hass, entry, async_add_entities):
     await coordinator.async_config_entry_first_refresh()
 
     async_add_entities([
-        SmartMeterSensor(coordinator, f"Smart Meter Reading {device}", f"smart_meter.readings_{device}", "meterReadings")
+        SmartMeterSensor(coordinator, f"Smart Meter Reading {device}", f"wiener-netze-smart-meter.readings_{device}", "meterReadings")
     ], True)
 
 
@@ -73,7 +73,9 @@ class SmartMeterDataCoordinator(DataUpdateCoordinator):
         await self._get_access_token()
         if self._access_token:
             await self._get_meter_reading_data()
-            await self._get_consumption_history_data()
+            await self._get_consumption_history_data(role = self._role )
+            await self._get_consumption_history_data(role = "G001" )
+            await self._get_consumption_history_data(role = "G002" )
             self._first_run = False
 
     async def _get_access_token(self):
@@ -176,7 +178,7 @@ class SmartMeterDataCoordinator(DataUpdateCoordinator):
             _LOGGER.exception("Exception fetching MeterReadings")
             raise UpdateFailed(f"Error getting meterReadings data: {e}")
 
-    async def _get_consumption_history_data(self):
+    async def _get_consumption_history_data(self, role: str = "V001"):
         """Fetch 15-min consumption data, aggregate hourly, and insert into HA statistics."""
         try:
             days = self._import_days if self._first_run else 2
@@ -186,7 +188,7 @@ class SmartMeterDataCoordinator(DataUpdateCoordinator):
                 params = {
                     "geschaeftspartner": self._user,
                     "zaehlpunktnummer": self._device,
-                    "rolle": self._role,
+                    "rolle": role,
                     "zeitpunktBis": datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S.000Z"),
                     "zeitpunktVon": (datetime.utcnow() - timedelta(days=days)).strftime("%Y-%m-%dT%H:%M:%S.000Z"),
                     "aggregat": "NONE"
@@ -229,8 +231,8 @@ class SmartMeterDataCoordinator(DataUpdateCoordinator):
                 hourly_consumption_cumulative[ts_hour] = start_value
                 hourly_consumption[ts_hour] += float(consumption_value)
 
-            self.add_statistics("Strom Verbrauchsdaten", "consumption", hourly_consumption)
-            self.add_statistics("Strom Verbrauchszähler", "consumption_counter", hourly_consumption_cumulative)
+            self.add_statistics("Strom Verbrauchsdaten", "consumption_" + role, hourly_consumption)
+            self.add_statistics("Strom Verbrauchszähler", "consumption_" + role + "_counter", hourly_consumption_cumulative)
 
         except Exception as e:
             _LOGGER.exception("Exception fetching Bewegungsdaten")

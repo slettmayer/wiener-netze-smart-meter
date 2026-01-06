@@ -1,5 +1,5 @@
 {
-    "domain": "smart_meter",
+    "domain": "wiener-netze-smart-meter",
     "name": "Smart Meter",
     "documentation": "https://seaa.dev",
     "dependencies": [],

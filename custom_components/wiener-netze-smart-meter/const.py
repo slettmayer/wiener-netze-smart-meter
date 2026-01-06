@@ -1,5 +1,5 @@
-"""Constants for the smart_meter component."""
-DOMAIN = "smart_meter"
+"""Constants for the wiener-netze-smart-meter component."""
+DOMAIN = "wiener-netze-smart-meter"
 AUTHORIZATION_ENDPOINT = "https://log.wien/auth/realms/logwien/protocol/openid-connect/auth"
 TOKEN_ENDPOINT = "https://log.wien/auth/realms/logwien/protocol/openid-connect/token"
 CLIENT_ID = "wn-smartmeter"

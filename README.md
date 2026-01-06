@@ -5,7 +5,7 @@ This enables you to monitor and track data about your electricity consumption.
 
 ## Installation
 
-1. Copy the `custom_components/smart_meter` folder into the `custom_components` directory of your Home Assistant setup.
+1. Copy the `custom_components/wiener-netze-smart-meter` folder into the `custom_components` directory of your Home Assistant setup.
 2. Restart Home Assistant
 3. Configure the integration via the Home Assistant user interface or your `configuration.yaml` file.
 

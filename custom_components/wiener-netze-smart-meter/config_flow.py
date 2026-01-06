@@ -1,10 +1,10 @@
-"""Config flow for the smart_meter integration."""
+"""Config flow for the wiener-netze-smart-meter integration."""
 from homeassistant import config_entries
 import voluptuous as vol
 from .const import DOMAIN
 
 class SmartMeterConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
-    """Handle a config flow for smart_meter."""
+    """Handle a config flow for wiener-netze-smart-meter."""
     VERSION = 1
 
     async def async_step_user(self, info=None):
