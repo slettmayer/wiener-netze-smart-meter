@@ -1,4 +1,5 @@
-"""The wiener-netze-smart-meter component."""
+"""The wiener_netze_smart_meter component."""
+
 import logging
 
 from homeassistant.config_entries import ConfigEntry
@@ -6,12 +7,14 @@ from homeassistant.core import HomeAssistant
 
 _LOGGER = logging.getLogger(__name__)
 
-async def async_setup(hass: HomeAssistant, config: dict):
-    """Set up the wiener-netze-smart-meter component."""
+
+async def async_setup(hass: HomeAssistant, config: dict) -> bool:
+    """Set up the wiener_netze_smart_meter component."""
     return True
 
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
-    """Set up wiener-netze-smart-meter from a config entry."""
+
+async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+    """Set up wiener_netze_smart_meter from a config entry."""
     _LOGGER.debug(f"Setting up Smart Meter integration for {entry.title}")
 
     # Use async_forward_entry_setups instead of the deprecated async_forward_entry_setup
@@ -19,7 +22,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
 
     return True
 
-async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry):
+
+async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
     await hass.config_entries.async_forward_entry_unload(entry, "sensor")
     return True

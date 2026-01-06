@@ -11,15 +11,57 @@ from homeassistant.components.recorder.statistics import async_add_external_stat
 from homeassistant.components.sensor import SensorDeviceClass
 from homeassistant.helpers.entity import Entity
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+import voluptuous as vol
+import homeassistant.helpers.config_validation as cv
+from homeassistant.components.sensor import PLATFORM_SCHEMA, SensorEntity
 
 from .const import *
 
 _LOGGER = logging.getLogger(__name__)
 SCAN_INTERVAL = timedelta(minutes=60)
 
+PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
+    {
+        vol.Required("token"): cv.string,
+        vol.Required("device"): cv.string,
+        vol.Required("gp"): cv.string,
+        vol.Optional("interval", default=60): cv.Number,
+        vol.Optional("15min_enabled", default=True): cv.boolean,
+        vol.Optional("import_days", default=21): cv.Number,
+    }
+)
+
+
+async def async_setup_platform(hass, config, async_add_entities, discovery_info=None):
+    """Set up the wiener_netze_smart_meter sensor platform."""
+    token = config.get("token")
+    interval = config.get("interval")
+    user = config.get("gp")
+    device = config.get("device")
+    extraSmallIntervalEnabled = config.get("15min_enabled")
+    import_days = config.get("import_days")
+
+    coordinator = SmartMeterDataCoordinator(
+        hass, token, interval, user, device, extraSmallIntervalEnabled, import_days
+    )
+
+    await coordinator.async_config_entry_first_refresh()
+
+    async_add_entities(
+        [
+            SmartMeterSensor(
+                coordinator,
+                f"Smart Meter Reading {device}",
+                f"wiener_netze_smart_meter.readings_{device}",
+                "meterReadings",
+            )
+        ],
+        True,
+    )
+
 
 async def async_setup_entry(hass, entry, async_add_entities):
-    """Set up the wiener-netze-smart-meter sensor platform."""
+    """Set up the wiener_netze_smart_meter sensor platform."""
     token = entry.data["TOKEN"]
     interval = entry.data["INTERVAL"]
     user = entry.data["GP"]
@@ -33,15 +75,32 @@ async def async_setup_entry(hass, entry, async_add_entities):
 
     await coordinator.async_config_entry_first_refresh()
 
-    async_add_entities([
-        SmartMeterSensor(coordinator, f"Smart Meter Reading {device}", f"wiener-netze-smart-meter.readings_{device}", "meterReadings")
-    ], True)
+    async_add_entities(
+        [
+            SmartMeterSensor(
+                coordinator,
+                f"Smart Meter Reading {device}",
+                f"wiener_netze_smart_meter.readings_{device}",
+                "meterReadings",
+            )
+        ],
+        True,
+    )
 
 
 class SmartMeterDataCoordinator(DataUpdateCoordinator):
     """Class to manage fetching smart meter data."""
 
-    def __init__(self, hass, token, interval, user, device, extraSmallIntervalEnabled, import_days):
+    def __init__(
+        self,
+        hass,
+        token,
+        interval,
+        user,
+        device,
+        extraSmallIntervalEnabled,
+        import_days,
+    ):
         self._token = token
         self._interval = timedelta(minutes=interval)
         self._access_token = None
@@ -73,9 +132,9 @@ class SmartMeterDataCoordinator(DataUpdateCoordinator):
         await self._get_access_token()
         if self._access_token:
             await self._get_meter_reading_data()
-            await self._get_consumption_history_data(role = self._role )
-            await self._get_consumption_history_data(role = "G001" )
-            await self._get_consumption_history_data(role = "G002" )
+            await self._get_consumption_history_data(role=self._role)
+            await self._get_consumption_history_data(role="G001")
+            await self._get_consumption_history_data(role="G002")
             self._first_run = False
 
     async def _get_access_token(self):
@@ -84,6 +143,7 @@ class SmartMeterDataCoordinator(DataUpdateCoordinator):
         code_challenge = self.generate_code_challenge(code_verifier)
 
         try:
+
             def execute_request():
                 auth_params = {
                     "client_id": CLIENT_ID,
@@ -99,14 +159,18 @@ class SmartMeterDataCoordinator(DataUpdateCoordinator):
                 }
                 auth_cookies = {"KEYCLOAK_IDENTITY": self._token}
                 session = requests.session()
-                _LOGGER.debug(f"[AUTH REQUEST] URL={AUTHORIZATION_ENDPOINT} PARAMS={auth_params} COOKIES={auth_cookies}")
+                _LOGGER.debug(
+                    f"[AUTH REQUEST] URL={AUTHORIZATION_ENDPOINT} PARAMS={auth_params} COOKIES={auth_cookies}"
+                )
                 resp = session.get(
                     AUTHORIZATION_ENDPOINT,
                     params=auth_params,
                     cookies=auth_cookies,
                     allow_redirects=False,
                 )
-                _LOGGER.debug(f"[AUTH RESPONSE] STATUS={resp.status_code} HEADERS={resp.headers} BODY={resp.text}")
+                _LOGGER.debug(
+                    f"[AUTH RESPONSE] STATUS={resp.status_code} HEADERS={resp.headers} BODY={resp.text}"
+                )
                 return resp
 
             response = await self.hass.async_add_executor_job(execute_request)
@@ -122,6 +186,7 @@ class SmartMeterDataCoordinator(DataUpdateCoordinator):
             raise UpdateFailed("Failed to obtain code from authorization call.")
 
         try:
+
             def _execute_request():
                 token_payload = {
                     "code": code,
@@ -131,9 +196,13 @@ class SmartMeterDataCoordinator(DataUpdateCoordinator):
                     "code_verifier": code_verifier,
                 }
                 session = requests.session()
-                _LOGGER.debug(f"[TOKEN REQUEST] URL={TOKEN_ENDPOINT} DATA={token_payload}")
+                _LOGGER.debug(
+                    f"[TOKEN REQUEST] URL={TOKEN_ENDPOINT} DATA={token_payload}"
+                )
                 resp = session.post(TOKEN_ENDPOINT, data=token_payload)
-                _LOGGER.debug(f"[TOKEN RESPONSE] STATUS={resp.status_code} BODY={resp.text}")
+                _LOGGER.debug(
+                    f"[TOKEN RESPONSE] STATUS={resp.status_code} BODY={resp.text}"
+                )
                 return resp
 
             response = await self.hass.async_add_executor_job(_execute_request)
@@ -150,29 +219,44 @@ class SmartMeterDataCoordinator(DataUpdateCoordinator):
         """Fetch meter reading data for sensor state."""
         try:
             days = self._import_days if self._first_run else 2
+
             def _execute_data_request():
                 api_url = (
-                        "https://service.wienernetze.at/sm/api/user/messwerte/meterReading/"
-                        + self._user + "/" + self._device
-                        + "?datetimeFrom=" + (datetime.utcnow() - timedelta(days=days + 1)).strftime("%Y-%m-%dT%H:%M:%S.000Z")
-                        + "&datetimeTo=" + datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S.000Z")
+                    "https://service.wienernetze.at/sm/api/user/messwerte/meterReading/"
+                    + self._user
+                    + "/"
+                    + self._device
+                    + "?datetimeFrom="
+                    + (datetime.utcnow() - timedelta(days=days + 1)).strftime(
+                        "%Y-%m-%dT%H:%M:%S.000Z"
+                    )
+                    + "&datetimeTo="
+                    + datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S.000Z")
                 )
                 headers = {"Authorization": f"Bearer {self._access_token}"}
                 session = requests.session()
                 _LOGGER.debug(f"[METERREADING REQUEST] URL={api_url} HEADERS={headers}")
                 resp = session.get(api_url, headers=headers)
-                _LOGGER.debug(f"[METERREADING RESPONSE] STATUS={resp.status_code} BODY={resp.text}")
+                _LOGGER.debug(
+                    f"[METERREADING RESPONSE] STATUS={resp.status_code} BODY={resp.text}"
+                )
                 return resp
 
             response = await self.hass.async_add_executor_job(_execute_data_request)
-            self._data["meterReadings"] = response.json().get("zaehlwerke", [])[0].get("messwerte", [])
+            self._data["meterReadings"] = (
+                response.json().get("zaehlwerke", [])[0].get("messwerte", [])
+            )
             values = response.json().get("zaehlwerke", [])[0].get("messwerte", [])
             if values:
                 map = {}
                 for v in values:
-                    map[datetime.fromisoformat(v["zeitBis"]).date().isoformat()] = v["messwert"]
+                    map[datetime.fromisoformat(v["zeitBis"]).date().isoformat()] = v[
+                        "messwert"
+                    ]
                 self._data["meterReadingsPerDay"] = map
-            _LOGGER.debug(f"[METERREADING SUCCESS] Retrieved {len(self._data['meterReadings'])} values")
+            _LOGGER.debug(
+                f"[METERREADING SUCCESS] Retrieved {len(self._data['meterReadings'])} values"
+            )
 
         except Exception as e:
             _LOGGER.exception("Exception fetching MeterReadings")
@@ -182,6 +266,7 @@ class SmartMeterDataCoordinator(DataUpdateCoordinator):
         """Fetch 15-min consumption data, aggregate hourly, and insert into HA statistics."""
         try:
             days = self._import_days if self._first_run else 2
+
             def _execute_data_request():
                 api_url = "https://service.wienernetze.at/sm/api/user/messwerte/bewegungsdaten"
                 headers = {"Authorization": f"Bearer {self._access_token}"}
@@ -189,14 +274,22 @@ class SmartMeterDataCoordinator(DataUpdateCoordinator):
                     "geschaeftspartner": self._user,
                     "zaehlpunktnummer": self._device,
                     "rolle": role,
-                    "zeitpunktBis": datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S.000Z"),
-                    "zeitpunktVon": (datetime.utcnow() - timedelta(days=days)).strftime("%Y-%m-%dT%H:%M:%S.000Z"),
-                    "aggregat": "NONE"
+                    "zeitpunktBis": datetime.utcnow().strftime(
+                        "%Y-%m-%dT%H:%M:%S.000Z"
+                    ),
+                    "zeitpunktVon": (datetime.utcnow() - timedelta(days=days)).strftime(
+                        "%Y-%m-%dT%H:%M:%S.000Z"
+                    ),
+                    "aggregat": "NONE",
                 }
                 session = requests.session()
-                _LOGGER.debug(f"[BEWEGUNGSDATEN REQUEST] URL={api_url} HEADERS={headers} PARAMS={params}")
+                _LOGGER.debug(
+                    f"[BEWEGUNGSDATEN REQUEST] URL={api_url} HEADERS={headers} PARAMS={params}"
+                )
                 resp = session.get(api_url, headers=headers, params=params)
-                _LOGGER.debug(f"[BEWEGUNGSDATEN RESPONSE] STATUS={resp.status_code} BODY={resp.text}")
+                _LOGGER.debug(
+                    f"[BEWEGUNGSDATEN RESPONSE] STATUS={resp.status_code} BODY={resp.text}"
+                )
                 return resp
 
             response = await self.hass.async_add_executor_job(_execute_data_request)
@@ -221,9 +314,13 @@ class SmartMeterDataCoordinator(DataUpdateCoordinator):
 
                 if start_value is None:
                     prev_day = (ts.date() - timedelta(days=1)).isoformat()
-                    previous_day_meter_value = self._data["meterReadingsPerDay"].get(prev_day)
+                    previous_day_meter_value = self._data["meterReadingsPerDay"].get(
+                        prev_day
+                    )
                     if previous_day_meter_value is None:
-                        _LOGGER.debug(f"No meter reading found for {prev_day}, skipping value")
+                        _LOGGER.debug(
+                            f"No meter reading found for {prev_day}, skipping value"
+                        )
                         continue
                     start_value = float(previous_day_meter_value)
 
@@ -231,8 +328,14 @@ class SmartMeterDataCoordinator(DataUpdateCoordinator):
                 hourly_consumption_cumulative[ts_hour] = start_value
                 hourly_consumption[ts_hour] += float(consumption_value)
 
-            self.add_statistics("Strom Verbrauchsdaten", "consumption_" + role, hourly_consumption)
-            self.add_statistics("Strom Verbrauchszähler", "consumption_" + role + "_counter", hourly_consumption_cumulative)
+            self.add_statistics(
+                "Strom Verbrauchsdaten", "consumption_" + role, hourly_consumption
+            )
+            self.add_statistics(
+                "Strom Verbrauchszähler",
+                "consumption_" + role + "_counter",
+                hourly_consumption_cumulative,
+            )
 
         except Exception as e:
             _LOGGER.exception("Exception fetching Bewegungsdaten")
@@ -252,9 +355,13 @@ class SmartMeterDataCoordinator(DataUpdateCoordinator):
             for hour, value in sorted(data.items()):
                 _LOGGER.debug(f"[HOURLY AGGREGATION] Hour={hour} Sum={value:.3f} kWh")
 
-            statistic_data = [StatisticData(start=dt, sum=value) for dt, value in sorted(data.items())]
+            statistic_data = [
+                StatisticData(start=dt, sum=value) for dt, value in sorted(data.items())
+            ]
             async_add_external_statistics(self.hass, metadata, statistic_data)
-            _LOGGER.debug(f"[BEWEGUNGSDATEN SUCCESS] Inserted {len(statistic_data)} hourly values")
+            _LOGGER.debug(
+                f"[BEWEGUNGSDATEN SUCCESS] Inserted {len(statistic_data)} hourly values"
+            )
 
 
 class SmartMeterSensor(Entity):
