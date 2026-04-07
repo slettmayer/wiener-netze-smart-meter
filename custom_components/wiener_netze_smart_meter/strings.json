@@ -1,0 +1,31 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Wiener Netze Smart Meter",
+        "description": "Choose how to authenticate with the Wiener Netze portal.",
+        "data": {
+          "auth_method": "Authentication method"
+        }
+      },
+      "credentials": {
+        "title": "Credentials & Meter Details",
+        "description": "Enter your credentials and smart meter details. For cookie auth, get the KEYCLOAK_IDENTITY cookie from https://smartmeter-web.wienernetze.at/ using browser developer tools.",
+        "data": {
+          "keycloak_identity": "KEYCLOAK_IDENTITY Cookie",
+          "username": "Username (Email)",
+          "password": "Password",
+          "geschaeftspartner": "Geschaeftspartner (User ID)",
+          "zaehlpunktnummer": "Zaehlpunktnummer (Meter Number)"
+        }
+      }
+    },
+    "error": {
+      "invalid_auth": "Authentication failed. Check your credentials.",
+      "cannot_connect": "Cannot connect to Wiener Netze API."
+    },
+    "abort": {
+      "already_configured": "This meter is already configured."
+    }
+  }
+}

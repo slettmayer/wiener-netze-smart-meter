@@ -1,0 +1,31 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Wiener Netze Smart Meter",
+        "description": "Authentifizierungsmethode fuer das Wiener Netze Portal waehlen.",
+        "data": {
+          "auth_method": "Authentifizierungsmethode"
+        }
+      },
+      "credentials": {
+        "title": "Zugangsdaten & Zaehlerdetails",
+        "description": "Geben Sie Ihre Zugangsdaten und Smart Meter Details ein. Fuer die Cookie-Authentifizierung den KEYCLOAK_IDENTITY Cookie von https://smartmeter-web.wienernetze.at/ in den Browser-Entwicklertools kopieren.",
+        "data": {
+          "keycloak_identity": "KEYCLOAK_IDENTITY Cookie",
+          "username": "Benutzername (E-Mail)",
+          "password": "Passwort",
+          "geschaeftspartner": "Geschaeftspartner (Benutzer-ID)",
+          "zaehlpunktnummer": "Zaehlpunktnummer (Geraete-Nr.)"
+        }
+      }
+    },
+    "error": {
+      "invalid_auth": "Authentifizierung fehlgeschlagen. Zugangsdaten pruefen.",
+      "cannot_connect": "Verbindung zur Wiener Netze API nicht moeglich."
+    },
+    "abort": {
+      "already_configured": "Dieser Zaehler ist bereits konfiguriert."
+    }
+  }
+}
