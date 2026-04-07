@@ -141,7 +141,7 @@ class SmartMeterCoordinator(DataUpdateCoordinator[dict]):
             return 0
 
         role_name = ROLE_NAMES.get(rolle, rolle)
-        zpn = self._zaehlpunktnummer.lower()
+        zpn = self._zaehlpunktnummer
 
         # Look up the sensor entity_id to link statistics to it
         entity_registry = er.async_get(self.hass)
