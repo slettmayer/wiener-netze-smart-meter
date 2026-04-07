@@ -3,6 +3,7 @@
 import logging
 from collections import defaultdict
 from datetime import datetime, timedelta, timezone
+from zoneinfo import ZoneInfo
 
 from homeassistant.components.recorder.models import (
     StatisticData,
@@ -101,12 +102,13 @@ class SmartMeterCoordinator(DataUpdateCoordinator[dict]):
             count = self._insert_statistics(rolle, hourly)
             result["stats_count"][rolle] = count
 
-            # Store the most recent day's total for the sensor entity
+            # Store the most recent local day's total for the sensor entity
             if hourly:
-                latest_day = max(hourly).strftime("%Y-%m-%d")
+                local_tz = ZoneInfo(self.hass.config.time_zone)
+                latest_day = max(hourly).astimezone(local_tz).strftime("%Y-%m-%d")
                 result["daily_total"][rolle] = sum(
                     v for h, v in hourly.items()
-                    if h.strftime("%Y-%m-%d") == latest_day
+                    if h.astimezone(local_tz).strftime("%Y-%m-%d") == latest_day
                 )
             _LOGGER.info(
                 "Inserted %d hourly statistics for %s (%s)",
@@ -164,10 +166,12 @@ class SmartMeterCoordinator(DataUpdateCoordinator[dict]):
             unit_of_measurement="kWh",
         )
 
-        # Group hours by day, cumulative sum resets each day
+        # Group hours by LOCAL day, cumulative sum resets each day
+        local_tz = ZoneInfo(self.hass.config.time_zone)
         days: dict[str, list[tuple[datetime, float]]] = defaultdict(list)
         for hour_start, value in sorted(hourly.items()):
-            day_key = hour_start.strftime("%Y-%m-%d")
+            local_time = hour_start.astimezone(local_tz)
+            day_key = local_time.strftime("%Y-%m-%d")
             days[day_key].append((hour_start, value))
 
         statistics: list[StatisticData] = []
