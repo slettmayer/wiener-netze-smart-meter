@@ -78,7 +78,7 @@ Smart home / energy management integration. Bridges the Wiener Netze utility por
 
 ## Design Decisions
 - Daily-resetting cumulative sums rather than monotonically increasing totals. Rationale: HA Energy Dashboard handles daily resets natively; avoids complex state management across days.
-- Three parallel API calls per fetch (one per role). Rationale: roles are independent data streams from the same endpoint.
+- Three sequential API calls per fetch (one per role). Roles are independent data streams from the same endpoint.
 - KEYCLOAK_IDENTITY cookie as primary auth. Rationale: simpler than password flow; avoids issues with Keycloak client support for resource owner password grant.
 
 ## Known Risks
@@ -87,6 +87,6 @@ Smart home / energy management integration. Bridges the Wiener Netze utility por
 - No documented SLA or rate limits for the Wiener Netze API
 
 ## Extension Guidelines
-- New energy roles: Add role code to `const.py`, add to the parallel fetch in `coordinator.py`
+- New energy roles: Add role code to `const.py`, add to the fetch loop in `coordinator.py`
 - New data types from Wiener Netze: Add endpoint to `api_client.py`, processing to `coordinator.py`
 - Additional sensor types: Add entity class to `sensor.py` reading from coordinator data
