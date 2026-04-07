@@ -175,7 +175,9 @@ class SmartMeterCoordinator(DataUpdateCoordinator[dict]):
             cumulative = 0.0
             for hour_start, value in days[day_key]:
                 cumulative += value
-                statistics.append(StatisticData(start=hour_start, sum=cumulative))
+                statistics.append(StatisticData(
+                    start=hour_start, state=cumulative, sum=cumulative
+                ))
 
         if statistics:
             async_import_statistics(self.hass, metadata, statistics)
