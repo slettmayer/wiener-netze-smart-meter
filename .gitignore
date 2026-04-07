@@ -94,4 +94,23 @@ Temporary Items
 .history
 .ionide
 
+### JetBrains ###
+.idea/
+*.iml
+
+### Python ###
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+dist/
+build/
+*.egg
+.venv/
+venv/
+.env
+
+### MCP ###
+.mcp.json
+
 # End of https://www.toptal.com/developers/gitignore/api/visualstudiocode,macos,homeassistant
