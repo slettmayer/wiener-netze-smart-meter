@@ -10,11 +10,10 @@ from homeassistant.components.recorder.models import (
     StatisticMeanType,
     StatisticMetaData,
 )
-from homeassistant.components.recorder.statistics import async_import_statistics
+from homeassistant.components.recorder.statistics import async_add_external_statistics
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryAuthFailed
-from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .api_client import ApiError, AuthenticationError, WienerNetzeApiClient
@@ -138,22 +137,13 @@ class SmartMeterCoordinator(DataUpdateCoordinator[dict]):
     def _insert_statistics(
         self, rolle: str, hourly: dict[datetime, float]
     ) -> int:
-        """Build cumulative sums per day and import as entity-linked statistics."""
+        """Build cumulative sums per day and insert as external statistics."""
         if not hourly:
             return 0
 
         role_name = ROLE_NAMES.get(rolle, rolle)
-        zpn = self._zaehlpunktnummer
-
-        # Look up the sensor entity_id to link statistics to it
-        entity_registry = er.async_get(self.hass)
-        unique_id = f"{DOMAIN}_{role_name}_{zpn}"
-        entity_id = entity_registry.async_get_entity_id("sensor", DOMAIN, unique_id)
-        if not entity_id:
-            _LOGGER.warning(
-                "Entity not found for unique_id=%s, skipping statistics", unique_id
-            )
-            return 0
+        zpn_suffix = self._zaehlpunktnummer[-8:]
+        statistic_id = f"{DOMAIN}:{role_name}_{zpn_suffix}"
 
         metadata = StatisticMetaData(
             has_mean=False,
@@ -161,8 +151,8 @@ class SmartMeterCoordinator(DataUpdateCoordinator[dict]):
             mean_type=StatisticMeanType.NONE,
             unit_class="energy",
             name=f"Smart Meter {role_name.title()}",
-            source="recorder",
-            statistic_id=entity_id,
+            source=DOMAIN,
+            statistic_id=statistic_id,
             unit_of_measurement="kWh",
         )
 
@@ -184,9 +174,9 @@ class SmartMeterCoordinator(DataUpdateCoordinator[dict]):
                 ))
 
         if statistics:
-            async_import_statistics(self.hass, metadata, statistics)
+            async_add_external_statistics(self.hass, metadata, statistics)
             _LOGGER.debug(
-                "Imported %d statistics for entity %s", len(statistics), entity_id
+                "Inserted %d external statistics for %s", len(statistics), statistic_id
             )
 
         return len(statistics)
