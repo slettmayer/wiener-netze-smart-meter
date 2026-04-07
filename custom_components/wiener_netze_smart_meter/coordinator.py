@@ -4,7 +4,11 @@ import logging
 from collections import defaultdict
 from datetime import datetime, timedelta, timezone
 
-from homeassistant.components.recorder.models import StatisticData, StatisticMetaData
+from homeassistant.components.recorder.models import (
+    StatisticData,
+    StatisticMeanType,
+    StatisticMetaData,
+)
 from homeassistant.components.recorder.statistics import async_add_external_statistics
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
@@ -68,6 +72,7 @@ class SmartMeterCoordinator(DataUpdateCoordinator[dict]):
             "fetch_days": self._fetch_days,
             "meter_reading": None,
             "stats_count": {},
+            "daily_total": {},
         }
 
         # Fetch and insert statistics for each role
@@ -94,6 +99,14 @@ class SmartMeterCoordinator(DataUpdateCoordinator[dict]):
             hourly = _aggregate_to_hourly(values)
             count = self._insert_statistics(rolle, hourly)
             result["stats_count"][rolle] = count
+
+            # Store the most recent day's total for the sensor entity
+            if hourly:
+                latest_day = max(hourly).strftime("%Y-%m-%d")
+                result["daily_total"][rolle] = sum(
+                    v for h, v in hourly.items()
+                    if h.strftime("%Y-%m-%d") == latest_day
+                )
             _LOGGER.info(
                 "Inserted %d hourly statistics for %s (%s)",
                 count,
@@ -133,6 +146,7 @@ class SmartMeterCoordinator(DataUpdateCoordinator[dict]):
         metadata = StatisticMetaData(
             has_mean=False,
             has_sum=True,
+            mean_type=StatisticMeanType.NONE,
             name=f"Smart Meter {role_name.title()}",
             source=DOMAIN,
             statistic_id=statistic_id,

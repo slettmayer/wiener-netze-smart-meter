@@ -12,7 +12,7 @@ from homeassistant.helpers.entity import EntityCategory
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from .const import CONF_ZAEHLPUNKTNUMMER, DOMAIN
+from .const import CONF_ZAEHLPUNKTNUMMER, DOMAIN, ROLE_NAMES, ROLES
 from .coordinator import SmartMeterCoordinator
 
 
@@ -25,10 +25,13 @@ async def async_setup_entry(
     coordinator: SmartMeterCoordinator = hass.data[DOMAIN][entry.entry_id]
     zpn = entry.data[CONF_ZAEHLPUNKTNUMMER]
 
-    async_add_entities([
+    entities = [
         SmartMeterDiagnosticSensor(coordinator, zpn),
         SmartMeterReadingSensor(coordinator, zpn),
-    ])
+    ]
+    for rolle in ROLES:
+        entities.append(SmartMeterEnergySensor(coordinator, zpn, rolle))
+    async_add_entities(entities)
 
 
 class SmartMeterDiagnosticSensor(
@@ -59,6 +62,32 @@ class SmartMeterDiagnosticSensor(
         return {
             f"imported_hours_{k}": v for k, v in stats_count.items()
         }
+
+
+class SmartMeterEnergySensor(
+    CoordinatorEntity[SmartMeterCoordinator], SensorEntity
+):
+    """Sensor showing the latest daily total for a specific role."""
+
+    _attr_device_class = SensorDeviceClass.ENERGY
+    _attr_state_class = SensorStateClass.TOTAL_INCREASING
+    _attr_native_unit_of_measurement = UnitOfEnergy.KILO_WATT_HOUR
+    _attr_icon = "mdi:flash"
+
+    def __init__(
+        self, coordinator: SmartMeterCoordinator, zpn: str, rolle: str
+    ) -> None:
+        super().__init__(coordinator)
+        self._rolle = rolle
+        role_name = ROLE_NAMES.get(rolle, rolle)
+        self._attr_unique_id = f"{DOMAIN}_{role_name}_{zpn}"
+        self._attr_name = f"Smart Meter {role_name.title()} {zpn[-8:]}"
+
+    @property
+    def native_value(self) -> float | None:
+        if self.coordinator.data is None:
+            return None
+        return self.coordinator.data.get("daily_total", {}).get(self._rolle)
 
 
 class SmartMeterReadingSensor(
