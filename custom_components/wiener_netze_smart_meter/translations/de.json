@@ -1,18 +1,31 @@
 {
-    "title": "Einrichtung des Wiener Smart Meter",
-    "config": {
-        "step": {
-            "user": {
-                "title": "Einrichtung des Wiener Smart Meter",
-                "data": {
-                    "GP": "Benutzer (Geschäftspartner) z.B. '120305XXXX'",
-                    "DEVICE": "Gerätenummer des Smart Meters (Zählpunktnummer) z.B. 'AT001000000000000000100001519XXXX'",
-                    "TOKEN": "KEYCLOAK_IDENTITY Cookie - Besuchen Sie https://smartmeter-web.wienernetze.at/ und kopieren Sie das Cookie aus den Entwicklertools",
-                    "INTERVAL": "Aktualisierungsrate in Minuten",
-                    "IMPORT_DAYS": "Anzahl der vergangenen Tage die zu beginn der Integration importiert werden sollen.",
-                    "15MIN_ENABLED": "Haben Sie den optionalen 15-Minuten-Zeitrahmen in Ihrer Smart Meter-Konfiguration aktiviert?"
-                }
-            }
+  "config": {
+    "step": {
+      "user": {
+        "title": "Wiener Netze Smart Meter",
+        "description": "Authentifizierungsmethode fuer das Wiener Netze Portal waehlen.",
+        "data": {
+          "auth_method": "Authentifizierungsmethode"
         }
+      },
+      "credentials": {
+        "title": "Zugangsdaten & Zaehlerdetails",
+        "description": "Geben Sie Ihre Zugangsdaten und Smart Meter Details ein. Fuer die Cookie-Authentifizierung den KEYCLOAK_IDENTITY Cookie von https://smartmeter-web.wienernetze.at/ in den Browser-Entwicklertools kopieren.",
+        "data": {
+          "keycloak_identity": "KEYCLOAK_IDENTITY Cookie",
+          "username": "Benutzername (E-Mail)",
+          "password": "Passwort",
+          "geschaeftspartner": "Geschaeftspartner (Benutzer-ID)",
+          "zaehlpunktnummer": "Zaehlpunktnummer (Geraete-Nr.)"
+        }
+      }
+    },
+    "error": {
+      "invalid_auth": "Authentifizierung fehlgeschlagen. Zugangsdaten pruefen.",
+      "cannot_connect": "Verbindung zur Wiener Netze API nicht moeglich."
+    },
+    "abort": {
+      "already_configured": "Dieser Zaehler ist bereits konfiguriert."
     }
+  }
 }
