@@ -87,7 +87,7 @@ class SmartMeterEnergySensor(
     def native_value(self) -> float | None:
         if self.coordinator.data is None:
             return None
-        return self.coordinator.data.get("daily_total", {}).get(self._rolle)
+        return self.coordinator.data.get("daily_total", {}).get(self._rolle, 0.0)
 
 
 class SmartMeterReadingSensor(
