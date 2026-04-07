@@ -16,7 +16,7 @@ Standard Home Assistant custom component with flat module layout under `custom_c
 - `config_flow.py` -- two-step UI config flow with live credential validation
 - `const.py` -- all constants, URLs, role codes, config keys (single source of truth)
 
-Data flow: HA automation triggers `fetch_data` service -> coordinator authenticates -> fetches 3 roles in parallel -> aggregates 15-min to hourly -> inserts external statistics into HA recorder.
+Data flow: HA automation triggers `fetch_data` service -> coordinator authenticates -> fetches 3 roles sequentially -> aggregates 15-min to hourly -> inserts external statistics into HA recorder.
 
 ## Tech Stack
 - Python 3.11+ (Home Assistant custom component)

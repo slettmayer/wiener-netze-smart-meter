@@ -61,7 +61,7 @@ No circular imports exist. Dependency direction is strictly downward.
 
 - **`__init__.py`**: Wires coordinator to config entry lifecycle (`async_setup_entry`, `async_unload_entry`). Registers `wiener_netze_smart_meter.fetch_data` service. Iterates all configured coordinators on service call.
 - **`api_client.py`**: Owns all HTTP communication. Two auth flows (cookie PKCE, password grant). Two data endpoints (bewegungsdaten, meterReading). Raises `AuthenticationError` and `ApiError`. Stateless -- no internal state caching.
-- **`coordinator.py`**: Extends `DataUpdateCoordinator[dict]` with `update_interval=None`. `async_fetch(days)` orchestrates: authenticate, fetch 3 roles in parallel + meter reading, aggregate 15-min to hourly, compute daily-resetting cumulative sums, insert external statistics, update sensor data dict.
+- **`coordinator.py`**: Extends `DataUpdateCoordinator[dict]` with `update_interval=None`. `async_fetch(days)` orchestrates: authenticate, fetch 3 roles sequentially + meter reading, aggregate 15-min to hourly, compute daily-resetting cumulative sums, insert external statistics, update sensor data dict.
 - **`sensor.py`**: Two entity classes (`SmartMeterDiagnosticSensor`, `SmartMeterReadingSensor`). Both extend `CoordinatorEntity` and read from `self.coordinator.data`. No independent state.
 - **`config_flow.py`**: Two-step `ConfigFlow` (`async_step_user` -> `async_step_credentials`). Validates credentials live. Deduplicates by Zaehlpunktnummer as unique ID.
 - **`const.py`**: Single source of truth for all string constants, URLs, role codes, config keys, defaults. No inline literals in other modules.
@@ -71,7 +71,7 @@ No circular imports exist. Dependency direction is strictly downward.
 1. HA automation calls `wiener_netze_smart_meter.fetch_data` service with `days` parameter
 2. `__init__.py` iterates all coordinators (one per config entry / meter)
 3. Coordinator authenticates via `api_client` (produces Bearer token)
-4. Coordinator calls API 3x in parallel (one per role: V002, G001, G003) + 1x for meter reading
+4. Coordinator calls API sequentially for each role (V002, G001, G003) + meter reading
 5. Raw 15-minute Bewegungsdaten are aggregated to hourly sums (`_aggregate_to_hourly`)
 6. Hourly values are accumulated into daily-resetting cumulative sums
 7. Statistics inserted into HA recorder via `async_add_external_statistics`

@@ -6,8 +6,8 @@ Home Assistant custom component that fetches energy consumption data from the Wi
 
 - Fetches 15-minute interval data from Wiener Netze, aggregates to hourly values
 - Three energy roles: **Total** (V002), **Grid/Restnetzbezug** (G001), **PV/Eigendeckung** (G003)
-- Inserts external statistics for the HA Energy Dashboard
-- Sensor entities for total/grid/pv visible in entity list and history
+- Inserts **external statistics** for the HA Energy Dashboard — no conflicts with HA's auto-recorded statistics
+- Timezone-correct day grouping — cumulative sums reset at local midnight (handles CET/CEST automatically)
 - Meter reading sensor showing the current counter value (kWh)
 - Diagnostic sensor showing last import timestamp
 - Service action `wiener_netze_smart_meter.fetch_data` with configurable `days` parameter — no automatic polling, fully controlled via HA automations
@@ -67,24 +67,32 @@ data:
 
 | Entity | Type | Description |
 |--------|------|-------------|
-| `sensor.smart_meter_total_*` | Energy | Latest day's total consumption (kWh) |
-| `sensor.smart_meter_grid_*` | Energy | Latest day's grid consumption (kWh) |
-| `sensor.smart_meter_pv_*` | Energy | Latest day's PV self-consumption (kWh) |
 | `sensor.smart_meter_reading_*` | Energy | Meter counter value (kWh) |
-| `sensor.smart_meter_import_status_*` | Diagnostic | Last import timestamp |
+| `sensor.smart_meter_import_status_*` | Diagnostic | Last import timestamp + imported hours per role |
 
-### External Statistics
+### External Statistics (Energy Dashboard)
 
-In addition to sensor entities, the integration inserts external statistics visible in **Developer Tools → Statistics**:
+The integration inserts external statistics visible in **Developer Tools → Statistics** and usable in the **Energy Dashboard**:
 
-- `wiener_netze_smart_meter:total_*`
-- `wiener_netze_smart_meter:grid_*`
-- `wiener_netze_smart_meter:pv_*`
+| Statistic ID | Role | Description |
+|-------------|------|-------------|
+| `wiener_netze_smart_meter:total_*` | V002 | Total consumption |
+| `wiener_netze_smart_meter:grid_*` | G001 | Grid consumption (Restnetzbezug) |
+| `wiener_netze_smart_meter:pv_*` | G003 | PV self-consumption (Eigendeckung) |
 
-These can be added to the **Energy Dashboard** under Settings → Dashboards → Energy.
+To use in the Energy Dashboard: **Settings → Dashboards → Energy → Add consumption/production** and search for `wiener_netze_smart_meter`.
+
+## Upgrading from v1.x
+
+If upgrading from a version that used entity-linked statistics (`sensor.smart_meter_total_*`, `sensor.smart_meter_grid_*`, `sensor.smart_meter_pv_*`):
+
+1. **Delete old statistics**: Developer Tools → Statistics → search "smart_meter" → delete old entries
+2. **Remove stale entities**: The old energy sensor entities will show as "unavailable" — delete them from the entity registry
+3. **Re-import**: Call `wiener_netze_smart_meter.fetch_data` service
+4. **Reconfigure Energy Dashboard**: Add the new external statistics (`wiener_netze_smart_meter:total_*`, etc.)
 
 ## Notes
 
 - Data from Wiener Netze can be delayed by 2–7 days. Fetching 7 days covers the typical delay.
-- Cumulative sums reset to 0 each day. The HA Energy Dashboard handles daily-resetting meters natively. Add a utility meter on top if you need a non-resetting counter.
+- Cumulative sums reset at local midnight each day (timezone-aware, handles CET/CEST). The HA Energy Dashboard handles daily-resetting meters natively.
 - The KEYCLOAK_IDENTITY cookie expires periodically — you'll need to re-enter it when authentication fails.
