@@ -157,6 +157,7 @@ class SmartMeterCoordinator(DataUpdateCoordinator[dict]):
             has_mean=False,
             has_sum=True,
             mean_type=StatisticMeanType.NONE,
+            unit_class="energy",
             name=f"Smart Meter {role_name.title()}",
             source="recorder",
             statistic_id=entity_id,
