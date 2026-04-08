@@ -3,14 +3,16 @@
 import logging
 from collections import defaultdict
 from datetime import UTC, datetime, timedelta
-from zoneinfo import ZoneInfo
 
 from homeassistant.components.recorder.models import (
     StatisticData,
     StatisticMeanType,
     StatisticMetaData,
 )
-from homeassistant.components.recorder.statistics import async_add_external_statistics
+from homeassistant.components.recorder.statistics import (
+    async_add_external_statistics,
+    get_last_statistics,
+)
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryAuthFailed
@@ -71,7 +73,6 @@ class SmartMeterCoordinator(DataUpdateCoordinator[dict]):
             "fetch_days": self._fetch_days,
             "meter_reading": None,
             "stats_count": {},
-            "daily_total": {},
         }
 
         # Fetch and insert statistics for each role
@@ -99,13 +100,6 @@ class SmartMeterCoordinator(DataUpdateCoordinator[dict]):
             count = self._insert_statistics(rolle, hourly)
             result["stats_count"][rolle] = count
 
-            # Store the most recent local day's total for the sensor entity
-            if hourly:
-                local_tz = ZoneInfo(self.hass.config.time_zone)
-                latest_day = max(hourly).astimezone(local_tz).strftime("%Y-%m-%d")
-                result["daily_total"][rolle] = sum(
-                    v for h, v in hourly.items() if h.astimezone(local_tz).strftime("%Y-%m-%d") == latest_day
-                )
             _LOGGER.info(
                 "Inserted %d hourly statistics for %s (%s)",
                 count,
@@ -132,7 +126,7 @@ class SmartMeterCoordinator(DataUpdateCoordinator[dict]):
         return result
 
     def _insert_statistics(self, rolle: str, hourly: dict[datetime, float]) -> int:
-        """Build cumulative sums per day and insert as external statistics."""
+        """Build monotonically increasing sums and insert as external statistics."""
         if not hourly:
             return 0
 
@@ -151,20 +145,24 @@ class SmartMeterCoordinator(DataUpdateCoordinator[dict]):
             unit_of_measurement="kWh",
         )
 
-        # Group hours by LOCAL day, cumulative sum resets each day
-        local_tz = ZoneInfo(self.hass.config.time_zone)
-        days: dict[str, list[tuple[datetime, float]]] = defaultdict(list)
-        for hour_start, value in sorted(hourly.items()):
-            local_time = hour_start.astimezone(local_tz)
-            day_key = local_time.strftime("%Y-%m-%d")
-            days[day_key].append((hour_start, value))
+        # Get last known cumulative sum from recorder
+        last_stats = get_last_statistics(self.hass, 1, statistic_id, True, {"sum"})
+        if statistic_id in last_stats and last_stats[statistic_id]:
+            last_sum = last_stats[statistic_id][0]["sum"]
+            last_start = datetime.fromtimestamp(last_stats[statistic_id][0]["start"], tz=UTC)
+        else:
+            last_sum = 0.0
+            last_start = datetime.min.replace(tzinfo=UTC)
 
+        # Build statistics: state=hourly value, sum=monotonically increasing
+        cumulative = last_sum
         statistics: list[StatisticData] = []
-        for day_key in sorted(days):
-            cumulative = 0.0
-            for hour_start, value in days[day_key]:
-                cumulative += value
-                statistics.append(StatisticData(start=hour_start, state=cumulative, sum=cumulative))
+        for hour_start in sorted(hourly):
+            if hour_start <= last_start:
+                continue
+            value = hourly[hour_start]
+            cumulative += value
+            statistics.append(StatisticData(start=hour_start, state=value, sum=cumulative))
 
         if statistics:
             async_add_external_statistics(self.hass, metadata, statistics)
