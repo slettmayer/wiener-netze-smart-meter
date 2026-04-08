@@ -6,6 +6,20 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [2.1.0] - 2026-04-08
+
+### Added
+- CI pipeline: ruff lint/format, hassfest, HACS validation on push/PR
+- Release workflow: auto-creates GitHub release from CHANGELOG.md on tag push
+- Ruff linter/formatter configuration (pyproject.toml)
+- HACS repository config (hacs.json)
+- CHANGELOG.md and CONTRIBUTING.md with documented dev workflow
+- CLAUDE.md and structured documentation (architecture, conventions, domain)
+
+### Fixed
+- Removed URLs from translation strings (hassfest compliance)
+- Added issue_tracker to manifest.json (HACS compliance)
+
 ## [2.0.0] - 2026-04-08
 
 ### Changed
