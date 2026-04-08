@@ -4,6 +4,7 @@ import logging
 from collections import defaultdict
 from datetime import UTC, datetime, timedelta
 
+from homeassistant.components.recorder import get_instance
 from homeassistant.components.recorder.models import (
     StatisticData,
     StatisticMeanType,
@@ -145,8 +146,8 @@ class SmartMeterCoordinator(DataUpdateCoordinator[dict]):
             unit_of_measurement="kWh",
         )
 
-        # Get last known cumulative sum from recorder (sync DB call, must run in executor)
-        last_stats = await self.hass.async_add_executor_job(
+        # Get last known cumulative sum from recorder (sync DB call, use recorder executor)
+        last_stats = await get_instance(self.hass).async_add_executor_job(
             get_last_statistics, self.hass, 1, statistic_id, True, {"sum"}
         )
         if statistic_id in last_stats and last_stats[statistic_id]:
