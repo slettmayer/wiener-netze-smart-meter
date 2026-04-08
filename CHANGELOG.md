@@ -6,6 +6,8 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [2.2.2] - 2026-04-08
+
 ### Fixed
 - Use recorder's dedicated executor for DB queries (fixes "accesses the database without the database executor" warning)
 
