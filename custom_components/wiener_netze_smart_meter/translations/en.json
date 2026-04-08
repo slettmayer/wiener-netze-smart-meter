@@ -10,7 +10,7 @@
       },
       "credentials": {
         "title": "Credentials & Meter Details",
-        "description": "Enter your credentials and smart meter details. For cookie auth, get the KEYCLOAK_IDENTITY cookie from https://smartmeter-web.wienernetze.at/ using browser developer tools.",
+        "description": "Enter your credentials and smart meter details. For cookie auth, get the KEYCLOAK_IDENTITY cookie from the Wiener Netze Smart Meter portal using browser developer tools.",
         "data": {
           "keycloak_identity": "KEYCLOAK_IDENTITY Cookie",
           "username": "Username (Email)",
