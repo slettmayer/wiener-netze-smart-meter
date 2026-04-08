@@ -97,7 +97,7 @@ class SmartMeterCoordinator(DataUpdateCoordinator[dict]):
                 continue
 
             hourly = _aggregate_to_hourly(values)
-            count = self._insert_statistics(rolle, hourly)
+            count = await self._insert_statistics(rolle, hourly)
             result["stats_count"][rolle] = count
 
             _LOGGER.info(
@@ -125,7 +125,7 @@ class SmartMeterCoordinator(DataUpdateCoordinator[dict]):
 
         return result
 
-    def _insert_statistics(self, rolle: str, hourly: dict[datetime, float]) -> int:
+    async def _insert_statistics(self, rolle: str, hourly: dict[datetime, float]) -> int:
         """Build monotonically increasing sums and insert as external statistics."""
         if not hourly:
             return 0
@@ -145,8 +145,10 @@ class SmartMeterCoordinator(DataUpdateCoordinator[dict]):
             unit_of_measurement="kWh",
         )
 
-        # Get last known cumulative sum from recorder
-        last_stats = get_last_statistics(self.hass, 1, statistic_id, True, {"sum"})
+        # Get last known cumulative sum from recorder (sync DB call, must run in executor)
+        last_stats = await self.hass.async_add_executor_job(
+            get_last_statistics, self.hass, 1, statistic_id, True, {"sum"}
+        )
         if statistic_id in last_stats and last_stats[statistic_id]:
             last_sum = last_stats[statistic_id][0]["sum"]
             last_start = datetime.fromtimestamp(last_stats[statistic_id][0]["start"], tz=UTC)

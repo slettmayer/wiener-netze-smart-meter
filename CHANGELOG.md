@@ -6,6 +6,9 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed
+- Fix sensors stuck on "unavailable" — `get_last_statistics` was called synchronously from the async event loop, now runs in executor thread
+
 ## [2.2.0] - 2026-04-08
 
 ### Changed
