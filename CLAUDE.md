@@ -19,7 +19,7 @@ Standard Home Assistant custom component with flat module layout under `custom_c
 Data flow: HA automation triggers `fetch_data` service -> coordinator authenticates -> fetches 3 roles sequentially -> aggregates 15-min to hourly -> inserts external statistics into HA recorder.
 
 ## Tech Stack
-- Python 3.11+ (Home Assistant custom component)
+- Python 3.12+ (Home Assistant custom component; ruff targets `py312`)
 - aiohttp for async HTTP (HA-provided)
 - voluptuous for schema validation (HA-provided)
 - HA Recorder for external statistics (`async_add_external_statistics`)
@@ -36,6 +36,12 @@ Data flow: HA automation triggers `fetch_data` service -> coordinator authentica
 
 ## Business Domain
 Austrian smart meter energy integration. Fetches 15-minute Bewegungsdaten (consumption records) from Wiener Netze for three energy roles -- Total (V002), Grid/Restnetzbezug (G001), PV/Eigendeckung (G003) -- aggregates to hourly statistics with daily-resetting cumulative sums for the HA Energy Dashboard. See [Domain Overview](docs/domain/OVERVIEW.md) for terminology and entity details.
+
+## CI/CD
+- **CI**: ruff lint+format, hassfest, HACS validation on every push to `main` and PR (`.github/workflows/ci.yml`)
+- **Release**: tag `v*` push auto-creates GitHub release from `CHANGELOG.md` (`.github/workflows/release.yml`)
+- **Dev workflow**: see [CONTRIBUTING.md](CONTRIBUTING.md) -- branch, lint, update changelog, PR, tag, release
+- **HACS**: `hacs.json` present; installable via HACS
 
 ## Structural Risks
 - No automated tests (CI runs linting and validation only)
