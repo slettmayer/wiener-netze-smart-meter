@@ -26,9 +26,7 @@ PLATFORMS = ["sensor"]
 
 SERVICE_SCHEMA = vol.Schema(
     {
-        vol.Optional(SERVICE_ATTR_DAYS, default=DEFAULT_FETCH_DAYS): vol.All(
-            int, vol.Range(min=1, max=365)
-        ),
+        vol.Optional(SERVICE_ATTR_DAYS, default=DEFAULT_FETCH_DAYS): vol.All(int, vol.Range(min=1, max=365)),
     }
 )
 
@@ -59,9 +57,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             for coordinator in hass.data.get(DOMAIN, {}).values():
                 await coordinator.async_fetch(days)
 
-        hass.services.async_register(
-            DOMAIN, SERVICE_FETCH_DATA, handle_fetch_data, schema=SERVICE_SCHEMA
-        )
+        hass.services.async_register(DOMAIN, SERVICE_FETCH_DATA, handle_fetch_data, schema=SERVICE_SCHEMA)
 
     return True
 

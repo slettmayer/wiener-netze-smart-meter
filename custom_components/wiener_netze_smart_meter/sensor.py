@@ -25,15 +25,15 @@ async def async_setup_entry(
     coordinator: SmartMeterCoordinator = hass.data[DOMAIN][entry.entry_id]
     zpn = entry.data[CONF_ZAEHLPUNKTNUMMER]
 
-    async_add_entities([
-        SmartMeterDiagnosticSensor(coordinator, zpn),
-        SmartMeterReadingSensor(coordinator, zpn),
-    ])
+    async_add_entities(
+        [
+            SmartMeterDiagnosticSensor(coordinator, zpn),
+            SmartMeterReadingSensor(coordinator, zpn),
+        ]
+    )
 
 
-class SmartMeterDiagnosticSensor(
-    CoordinatorEntity[SmartMeterCoordinator], SensorEntity
-):
+class SmartMeterDiagnosticSensor(CoordinatorEntity[SmartMeterCoordinator], SensorEntity):
     """Sensor showing the last successful import timestamp."""
 
     _attr_entity_category = EntityCategory.DIAGNOSTIC
@@ -56,14 +56,10 @@ class SmartMeterDiagnosticSensor(
         if self.coordinator.data is None:
             return {}
         stats_count = self.coordinator.data.get("stats_count", {})
-        return {
-            f"imported_hours_{k}": v for k, v in stats_count.items()
-        }
+        return {f"imported_hours_{k}": v for k, v in stats_count.items()}
 
 
-class SmartMeterReadingSensor(
-    CoordinatorEntity[SmartMeterCoordinator], SensorEntity
-):
+class SmartMeterReadingSensor(CoordinatorEntity[SmartMeterCoordinator], SensorEntity):
     """Sensor showing the latest meter counter value."""
 
     _attr_device_class = SensorDeviceClass.ENERGY

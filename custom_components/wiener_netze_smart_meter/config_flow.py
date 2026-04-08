@@ -30,9 +30,7 @@ class WienerNetzeSmartMeterConfigFlow(ConfigFlow, domain=DOMAIN):
     def __init__(self) -> None:
         self._auth_method: str | None = None
 
-    async def async_step_user(
-        self, user_input: dict | None = None
-    ) -> ConfigFlowResult:
+    async def async_step_user(self, user_input: dict | None = None) -> ConfigFlowResult:
         """Step 1: Choose auth method."""
         if user_input is not None:
             self._auth_method = user_input[CONF_AUTH_METHOD]
@@ -42,9 +40,7 @@ class WienerNetzeSmartMeterConfigFlow(ConfigFlow, domain=DOMAIN):
             step_id="user",
             data_schema=vol.Schema(
                 {
-                    vol.Required(
-                        CONF_AUTH_METHOD, default=AUTH_METHOD_COOKIE
-                    ): vol.In(
+                    vol.Required(CONF_AUTH_METHOD, default=AUTH_METHOD_COOKIE): vol.In(
                         {
                             AUTH_METHOD_COOKIE: "KEYCLOAK_IDENTITY Cookie",
                             AUTH_METHOD_PASSWORD: "Username & Password",
@@ -54,9 +50,7 @@ class WienerNetzeSmartMeterConfigFlow(ConfigFlow, domain=DOMAIN):
             ),
         )
 
-    async def async_step_credentials(
-        self, user_input: dict | None = None
-    ) -> ConfigFlowResult:
+    async def async_step_credentials(self, user_input: dict | None = None) -> ConfigFlowResult:
         """Step 2: Enter credentials and meter details."""
         errors: dict[str, str] = {}
 
