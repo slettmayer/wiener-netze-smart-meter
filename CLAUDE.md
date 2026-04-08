@@ -38,9 +38,10 @@ Data flow: HA automation triggers `fetch_data` service -> coordinator authentica
 Austrian smart meter energy integration. Fetches 15-minute Bewegungsdaten (consumption records) from Wiener Netze for three energy roles -- Total (V002), Grid/Restnetzbezug (G001), PV/Eigendeckung (G003) -- aggregates to hourly statistics with daily-resetting cumulative sums for the HA Energy Dashboard. See [Domain Overview](docs/domain/OVERVIEW.md) for terminology and entity details.
 
 ## CI/CD
-- **CI**: ruff lint+format, hassfest, HACS validation on every push to `main` and PR (`.github/workflows/ci.yml`)
-- **Release**: tag `v*` push auto-creates GitHub release from `CHANGELOG.md` (`.github/workflows/release.yml`)
-- **Dev workflow**: see [CONTRIBUTING.md](CONTRIBUTING.md) -- branch, lint, update changelog, PR, tag, release
+- **Validate**: ruff lint+format, hassfest, HACS validation + gate job on every push to `main` and PR (`.github/workflows/validate.yml`)
+- **Release**: auto-creates tag + GitHub release after validate succeeds on main when version changes (`.github/workflows/release.yml`)
+- **Dependabot**: auto-bumps patch version and changelog on Dependabot PRs (`.github/workflows/dependabot-version-bump.yml`)
+- **Dev workflow**: see [CONTRIBUTING.md](CONTRIBUTING.md) -- branch, lint, bump version + changelog in PR, merge triggers release
 - **HACS**: `hacs.json` present; installable via HACS
 
 ## Structural Risks
