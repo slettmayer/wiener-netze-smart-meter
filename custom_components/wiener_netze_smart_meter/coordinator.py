@@ -2,7 +2,7 @@
 
 import logging
 from collections import defaultdict
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from zoneinfo import ZoneInfo
 
 from homeassistant.components.recorder.models import (
@@ -14,7 +14,7 @@ from homeassistant.components.recorder.statistics import async_add_external_stat
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryAuthFailed
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 
 from .api_client import ApiError, AuthenticationError, WienerNetzeApiClient
 from .const import (
@@ -62,10 +62,8 @@ class SmartMeterCoordinator(DataUpdateCoordinator[dict]):
         except AuthenticationError as err:
             raise ConfigEntryAuthFailed(str(err)) from err
 
-        now = datetime.now(timezone.utc)
-        von = (now - timedelta(days=self._fetch_days)).strftime(
-            "%Y-%m-%dT%H:%M:%S.000Z"
-        )
+        now = datetime.now(UTC)
+        von = (now - timedelta(days=self._fetch_days)).strftime("%Y-%m-%dT%H:%M:%S.000Z")
         bis = now.strftime("%Y-%m-%dT%H:%M:%S.000Z")
 
         result: dict = {
@@ -106,8 +104,7 @@ class SmartMeterCoordinator(DataUpdateCoordinator[dict]):
                 local_tz = ZoneInfo(self.hass.config.time_zone)
                 latest_day = max(hourly).astimezone(local_tz).strftime("%Y-%m-%d")
                 result["daily_total"][rolle] = sum(
-                    v for h, v in hourly.items()
-                    if h.astimezone(local_tz).strftime("%Y-%m-%d") == latest_day
+                    v for h, v in hourly.items() if h.astimezone(local_tz).strftime("%Y-%m-%d") == latest_day
                 )
             _LOGGER.info(
                 "Inserted %d hourly statistics for %s (%s)",
@@ -134,9 +131,7 @@ class SmartMeterCoordinator(DataUpdateCoordinator[dict]):
 
         return result
 
-    def _insert_statistics(
-        self, rolle: str, hourly: dict[datetime, float]
-    ) -> int:
+    def _insert_statistics(self, rolle: str, hourly: dict[datetime, float]) -> int:
         """Build cumulative sums per day and insert as external statistics."""
         if not hourly:
             return 0
@@ -169,15 +164,11 @@ class SmartMeterCoordinator(DataUpdateCoordinator[dict]):
             cumulative = 0.0
             for hour_start, value in days[day_key]:
                 cumulative += value
-                statistics.append(StatisticData(
-                    start=hour_start, state=cumulative, sum=cumulative
-                ))
+                statistics.append(StatisticData(start=hour_start, state=cumulative, sum=cumulative))
 
         if statistics:
             async_add_external_statistics(self.hass, metadata, statistics)
-            _LOGGER.debug(
-                "Inserted %d external statistics for %s", len(statistics), statistic_id
-            )
+            _LOGGER.debug("Inserted %d external statistics for %s", len(statistics), statistic_id)
 
         return len(statistics)
 
@@ -195,7 +186,7 @@ def _aggregate_to_hourly(values: list[dict]) -> dict[datetime, float]:
         try:
             ts = datetime.fromisoformat(zeitpunkt)
             if ts.tzinfo is None:
-                ts = ts.replace(tzinfo=timezone.utc)
+                ts = ts.replace(tzinfo=UTC)
         except ValueError:
             _LOGGER.debug("Could not parse timestamp: %s", zeitpunkt)
             continue

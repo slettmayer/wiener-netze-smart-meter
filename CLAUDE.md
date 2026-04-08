@@ -4,7 +4,7 @@
 ## Quick Reference
 - **Install**: Copy `custom_components/wiener_netze_smart_meter/` into HA's `custom_components/` directory, restart HA
 - **Test**: No automated tests configured
-- **Lint**: No linter configured; follow PEP 8 manually
+- **Lint**: `ruff check . && ruff format . --check` (config in `pyproject.toml`)
 
 ## Architecture Overview
 Standard Home Assistant custom component with flat module layout under `custom_components/wiener_netze_smart_meter/`. Strict one-way dependency chain:
@@ -38,8 +38,7 @@ Data flow: HA automation triggers `fetch_data` service -> coordinator authentica
 Austrian smart meter energy integration. Fetches 15-minute Bewegungsdaten (consumption records) from Wiener Netze for three energy roles -- Total (V002), Grid/Restnetzbezug (G001), PV/Eigendeckung (G003) -- aggregates to hourly statistics with daily-resetting cumulative sums for the HA Energy Dashboard. See [Domain Overview](docs/domain/OVERVIEW.md) for terminology and entity details.
 
 ## Structural Risks
-- No automated tests or CI pipeline
-- No linter/formatter configuration; style maintained manually
+- No automated tests (CI runs linting and validation only)
 - Hand-rolled PKCE implementation rather than vetted OAuth library
 - KEYCLOAK_IDENTITY cookie expires periodically, requiring manual re-entry
 - All business logic concentrated in `coordinator.py`

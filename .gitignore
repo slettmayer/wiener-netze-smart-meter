@@ -109,6 +109,7 @@ build/
 .venv/
 venv/
 .env
+.ruff_cache/
 
 ### MCP ###
 .mcp.json

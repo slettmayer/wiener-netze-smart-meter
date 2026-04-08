@@ -10,7 +10,7 @@
       },
       "credentials": {
         "title": "Zugangsdaten & Zaehlerdetails",
-        "description": "Geben Sie Ihre Zugangsdaten und Smart Meter Details ein. Fuer die Cookie-Authentifizierung den KEYCLOAK_IDENTITY Cookie von https://smartmeter-web.wienernetze.at/ in den Browser-Entwicklertools kopieren.",
+        "description": "Geben Sie Ihre Zugangsdaten und Smart Meter Details ein. Fuer die Cookie-Authentifizierung den KEYCLOAK_IDENTITY Cookie vom Wiener Netze Smart Meter Portal in den Browser-Entwicklertools kopieren.",
         "data": {
           "keycloak_identity": "KEYCLOAK_IDENTITY Cookie",
           "username": "Benutzername (E-Mail)",

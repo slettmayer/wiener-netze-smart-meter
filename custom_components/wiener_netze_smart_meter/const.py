@@ -3,12 +3,8 @@
 DOMAIN = "wiener_netze_smart_meter"
 
 # Keycloak OIDC endpoints
-AUTHORIZATION_ENDPOINT = (
-    "https://log.wien/auth/realms/logwien/protocol/openid-connect/auth"
-)
-TOKEN_ENDPOINT = (
-    "https://log.wien/auth/realms/logwien/protocol/openid-connect/token"
-)
+AUTHORIZATION_ENDPOINT = "https://log.wien/auth/realms/logwien/protocol/openid-connect/auth"
+TOKEN_ENDPOINT = "https://log.wien/auth/realms/logwien/protocol/openid-connect/token"
 CLIENT_ID = "wn-smartmeter"
 REDIRECT_URI = "https://smartmeter-web.wienernetze.at"
 

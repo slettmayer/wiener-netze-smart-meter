@@ -9,7 +9,6 @@ from urllib.parse import parse_qs, urlparse
 import aiohttp
 
 from .const import (
-    AUTH_METHOD_COOKIE,
     AUTH_METHOD_PASSWORD,
     AUTHORIZATION_ENDPOINT,
     BEWEGUNGSDATEN_ENDPOINT,
@@ -85,12 +84,9 @@ class WienerNetzeApiClient:
 
         location = resp.headers.get("Location", "")
         if not location:
-            _LOGGER.debug(
-                "Auth response status=%s, no Location header", resp.status
-            )
+            _LOGGER.debug("Auth response status=%s, no Location header", resp.status)
             raise AuthenticationError(
-                "No redirect from authorization endpoint. "
-                "The KEYCLOAK_IDENTITY cookie may be expired."
+                "No redirect from authorization endpoint. The KEYCLOAK_IDENTITY cookie may be expired."
             )
 
         # Parse code from fragment: ...#...&code=XXXX
@@ -102,10 +98,7 @@ class WienerNetzeApiClient:
             codes = parse_qs(urlparse(location).query).get("code", [])
         if not codes:
             _LOGGER.debug("Location header: %s", location)
-            raise AuthenticationError(
-                "No authorization code in redirect. "
-                "The KEYCLOAK_IDENTITY cookie may be expired."
-            )
+            raise AuthenticationError("No authorization code in redirect. The KEYCLOAK_IDENTITY cookie may be expired.")
         code = codes[0]
 
         # Step 2: Exchange code for access token
@@ -120,9 +113,7 @@ class WienerNetzeApiClient:
         try:
             resp = await self._session.post(TOKEN_ENDPOINT, data=token_data)
         except aiohttp.ClientError as err:
-            raise AuthenticationError(
-                f"Connection error during token exchange: {err}"
-            ) from err
+            raise AuthenticationError(f"Connection error during token exchange: {err}") from err
 
         if resp.status != 200:
             body = await resp.text()
@@ -150,9 +141,7 @@ class WienerNetzeApiClient:
         try:
             resp = await self._session.post(TOKEN_ENDPOINT, data=token_data)
         except aiohttp.ClientError as err:
-            raise AuthenticationError(
-                f"Connection error during password auth: {err}"
-            ) from err
+            raise AuthenticationError(f"Connection error during password auth: {err}") from err
 
         if resp.status in (400, 401, 403):
             body = await resp.text()
@@ -162,9 +151,7 @@ class WienerNetzeApiClient:
                 "The wn-smartmeter client may not support password grant."
             )
         if resp.status != 200:
-            raise AuthenticationError(
-                f"Password authentication failed (HTTP {resp.status})"
-            )
+            raise AuthenticationError(f"Password authentication failed (HTTP {resp.status})")
 
         data = await resp.json()
         access_token = data.get("access_token")
@@ -195,9 +182,7 @@ class WienerNetzeApiClient:
         headers = {"Authorization": f"Bearer {access_token}"}
 
         try:
-            resp = await self._session.get(
-                BEWEGUNGSDATEN_ENDPOINT, params=params, headers=headers
-            )
+            resp = await self._session.get(BEWEGUNGSDATEN_ENDPOINT, params=params, headers=headers)
         except aiohttp.ClientError as err:
             raise ApiError(f"Connection error fetching bewegungsdaten: {err}") from err
 
@@ -209,15 +194,11 @@ class WienerNetzeApiClient:
                 resp.status,
                 body,
             )
-            raise ApiError(
-                f"Bewegungsdaten request failed for {rolle} (HTTP {resp.status})"
-            )
+            raise ApiError(f"Bewegungsdaten request failed for {rolle} (HTTP {resp.status})")
 
         data = await resp.json()
         values = data.get("values", [])
-        _LOGGER.debug(
-            "Fetched %d values for rolle=%s", len(values), rolle
-        )
+        _LOGGER.debug("Fetched %d values for rolle=%s", len(values), rolle)
         return values
 
     async def fetch_meter_reading(
@@ -243,9 +224,7 @@ class WienerNetzeApiClient:
 
         if resp.status != 200:
             body = await resp.text()
-            _LOGGER.debug(
-                "Meter reading request failed: status=%s body=%s", resp.status, body
-            )
+            _LOGGER.debug("Meter reading request failed: status=%s body=%s", resp.status, body)
             raise ApiError(f"Meter reading request failed (HTTP {resp.status})")
 
         data = await resp.json()

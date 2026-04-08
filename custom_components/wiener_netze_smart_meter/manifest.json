@@ -6,6 +6,7 @@
   "dependencies": ["recorder"],
   "documentation": "https://github.com/slettmayer/wiener-netze-smart-meter",
   "iot_class": "cloud_polling",
+  "issue_tracker": "https://github.com/slettmayer/wiener-netze-smart-meter/issues",
   "requirements": [],
   "version": "2.0.0"
 }
