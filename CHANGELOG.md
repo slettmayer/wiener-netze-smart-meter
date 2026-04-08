@@ -6,6 +6,8 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [2.2.0] - 2026-04-08
+
 ### Changed
 - Statistics now use monotonically increasing `sum` (no daily reset) and hourly consumption as `state`
 - `stat_type: state` shows hourly consumption bars, `stat_type: change` works without negative spikes
