@@ -31,13 +31,14 @@ Documents the coding conventions, naming patterns, error handling strategy, and 
 ### Code Style
 
 - 4-space indentation (PEP 8)
+- Max line length: 120 (configured in `pyproject.toml`)
 - Double quotes for strings throughout
-- Import ordering: stdlib, third-party, HA framework, local relative (PEP 8 / isort)
+- Import ordering: stdlib, third-party, HA framework, local relative (enforced by ruff `I` / isort)
 - Full type annotations on function signatures using `X | Y` union syntax
 - One-line docstrings (`"""..."""`) on every module, class, and method
 - f-strings for dynamic string formatting in application code
-- `%`-style formatting in `_LOGGER` calls (avoids unnecessary interpolation)
-- No linter or formatter config files present; style maintained manually
+- `%`-style formatting in `_LOGGER` calls (machine-enforced by ruff `LOG` rule set)
+- **Ruff** enforces style in CI; config in `pyproject.toml`. Rule sets: `E`, `W`, `F`, `I`, `UP`, `B`, `SIM`, `LOG`
 
 ### Error Handling
 
@@ -71,13 +72,12 @@ All magic strings, URLs, role codes, config keys, and defaults are defined in `c
 - Home Assistant naming conventions for integration components
 
 ## Design Decisions
-- `%`-style logging over f-strings for `_LOGGER` calls to avoid string interpolation cost when log level is disabled. Rationale: HA best practice.
+- `%`-style logging over f-strings for `_LOGGER` calls to avoid string interpolation cost when log level is disabled. Rationale: HA best practice. Now machine-enforced by ruff `LOG` rule set.
 - One-line docstrings on all items rather than selective documentation. Rationale: consistency over verbosity.
-- No formatter/linter tooling configured. Rationale not documented -- needs team input.
+- Ruff as linter/formatter with `line-length = 120` and `target-version = "py312"`. Rationale: HA ecosystem standard; `pyupgrade` rules keep syntax modern.
 
 ## Known Risks
-- Without linter enforcement, style drift is possible as the codebase grows
-- Manual style maintenance increases review burden
+- Ruff does not catch all style issues (e.g., docstring presence is not enforced by current rule set)
 
 ## Extension Guidelines
 - New constants go in `const.py` with the appropriate prefix

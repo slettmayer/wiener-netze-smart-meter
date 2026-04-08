@@ -15,8 +15,8 @@ Documents the languages, frameworks, libraries, API patterns, and runtime depend
 ## Overview
 
 ### Language
-- Python 3 (requires 3.11+ for modern HA compatibility)
-- Uses `X | Y` union type syntax (Python 3.10+), `zoneinfo` (Python 3.9+)
+- Python 3 (requires 3.12+; ruff `target-version = "py312"`)
+- Uses `X | Y` union type syntax (Python 3.10+), `zoneinfo` (Python 3.9+), `datetime.UTC` alias (Python 3.11+)
 
 ### Framework
 - **Home Assistant Custom Component** following the `custom_components/<domain>/` layout
@@ -44,10 +44,21 @@ The integration acts as an HTTP client consuming two external REST APIs:
 All HTTP I/O is async via the HA-managed shared `ClientSession` from `async_get_clientsession`.
 
 ### Build Tools
-None. The integration is installed as a raw directory drop-in under `custom_components/`.
+None. The integration is installed as a raw directory drop-in under `custom_components/`. Also installable via HACS (`hacs.json` present).
+
+### Linting and Formatting
+- **Ruff** configured in `pyproject.toml`: `target-version = "py312"`, `line-length = 120`
+- Rule sets: `E`, `W`, `F` (pycodestyle/pyflakes), `I` (isort), `UP` (pyupgrade), `B` (bugbear), `SIM` (simplify), `LOG` (logging)
+- `LOG` rule set machine-enforces `%`-style logging convention
+- Run locally: `ruff check . && ruff format . --check`
 
 ### CI/CD
-None detected.
+- **CI** (`.github/workflows/ci.yml`): triggers on push to `main` and all PRs. Three parallel jobs:
+  - `ruff` -- lint and format check (Python 3.12)
+  - `hassfest` -- validates `manifest.json`, translations, services against HA integration requirements
+  - `hacs` -- validates HACS compatibility (`ignore: brands` since no icon asset)
+- **Release** (`.github/workflows/release.yml`): triggers on `v*` tag push. Extracts version-specific notes from `CHANGELOG.md` via `awk` and creates a GitHub Release via `softprops/action-gh-release@v2`
+- **Release process**: documented in [CONTRIBUTING.md](../../CONTRIBUTING.md) -- update CHANGELOG, bump `manifest.json` version, tag, push
 
 ### Testing
 No test framework, test files, or test dependencies present.
@@ -67,9 +78,7 @@ No test framework, test files, or test dependencies present.
 - No separate `requirements` declaration -- all dependencies are provided by HA runtime
 
 ## Known Risks
-- No automated tests to catch regressions
-- No CI pipeline to enforce code quality
-- No linter or formatter configuration; style is maintained manually
+- No automated tests to catch regressions (CI covers linting and validation only)
 - PKCE implementation is hand-rolled rather than using a vetted library
 
 ## Extension Guidelines
