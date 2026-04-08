@@ -1,5 +1,12 @@
 # Changelog
 
+## 2.3.0
+
+- Automate releases: version change in manifest.json triggers tag + GitHub release after validation passes
+- Add dependabot auto-bump: patch version and changelog entry created automatically on Dependabot PRs
+- Rename CI workflow to Validate with gate job for branch protection
+- Simplify changelog format: flat bullets, no Unreleased section
+
 ## 2.2.2
 
 - Fix: use recorder's dedicated executor for DB queries
