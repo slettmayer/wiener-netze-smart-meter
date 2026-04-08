@@ -1,51 +1,36 @@
 # Changelog
 
-All notable changes to this project will be documented in this file.
-Format based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
-This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+## 2.2.2
 
-## [Unreleased]
+- Fix: use recorder's dedicated executor for DB queries
 
-## [2.2.2] - 2026-04-08
+## 2.2.1
 
-### Fixed
-- Use recorder's dedicated executor for DB queries (fixes "accesses the database without the database executor" warning)
+- Fix: sensors stuck on "unavailable" — run get_last_statistics in executor thread
 
-## [2.2.1] - 2026-04-08
+## 2.2.0
 
-### Fixed
-- Fix sensors stuck on "unavailable" — `get_last_statistics` was called synchronously from the async event loop, now runs in executor thread
+- Statistics now use monotonically increasing sum (no daily reset) and hourly consumption as state
+- stat_type: state shows hourly consumption bars, stat_type: change works without negative spikes
+- Query recorder for last known sum before inserting (idempotent across restarts)
 
-## [2.2.0] - 2026-04-08
+## 2.1.0
 
-### Changed
-- Statistics now use monotonically increasing `sum` (no daily reset) and hourly consumption as `state`
-- `stat_type: state` shows hourly consumption bars, `stat_type: change` works without negative spikes
-- Queries recorder for last known sum before inserting (idempotent across restarts)
+- Add CI pipeline: ruff lint/format, hassfest, HACS validation on push/PR
+- Add release workflow: auto-creates GitHub release from CHANGELOG.md on tag push
+- Add ruff linter/formatter configuration (pyproject.toml)
+- Add HACS repository config (hacs.json)
+- Add CHANGELOG.md and CONTRIBUTING.md with documented dev workflow
+- Add CLAUDE.md and structured documentation (architecture, conventions, domain)
+- Fix: removed URLs from translation strings (hassfest compliance)
+- Fix: added issue_tracker to manifest.json (HACS compliance)
 
-## [2.1.0] - 2026-04-08
+## 2.0.0
 
-### Added
-- CI pipeline: ruff lint/format, hassfest, HACS validation on push/PR
-- Release workflow: auto-creates GitHub release from CHANGELOG.md on tag push
-- Ruff linter/formatter configuration (pyproject.toml)
-- HACS repository config (hacs.json)
-- CHANGELOG.md and CONTRIBUTING.md with documented dev workflow
-- CLAUDE.md and structured documentation (architecture, conventions, domain)
-
-### Fixed
-- Removed URLs from translation strings (hassfest compliance)
-- Added issue_tracker to manifest.json (HACS compliance)
-
-## [2.0.0] - 2026-04-08
-
-### Changed
 - Complete rebuild with clean architecture
 - Switch to external statistics (no more HA auto-recording conflicts)
 - Timezone-correct day grouping (CET/CEST)
 - aiohttp instead of blocking requests
 - Two auth methods: KEYCLOAK_IDENTITY cookie or username/password
-- Service action `fetch_data` instead of automatic polling
-
-### Removed
-- Energy sensor entities (total/grid/pv) -- replaced by external statistics
+- Service action fetch_data instead of automatic polling
+- Removed energy sensor entities (total/grid/pv) — replaced by external statistics

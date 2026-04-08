@@ -7,25 +7,26 @@
 1. Create a feature branch from `main`
 2. Make your changes
 3. Run linting locally: `ruff check . && ruff format . --check`
-4. Update `CHANGELOG.md` -- add entries under `## [Unreleased]`
-5. Create a PR -- CI runs automatically (ruff, hassfest, HACS validation)
-6. Merge PR (squash)
+4. Bump `version` in `custom_components/wiener_netze_smart_meter/manifest.json`
+5. Add a new `## X.Y.Z` section at the top of `CHANGELOG.md` with your changes
+6. Create a PR — CI runs automatically (ruff, hassfest, HACS validation)
+7. Merge PR (squash)
+8. Release is created automatically after validation passes on `main`
 
-### Creating a Release
+### Releasing
 
-1. Move `[Unreleased]` entries in `CHANGELOG.md` to a new version section:
-   ```
-   ## [Unreleased]
+Releases are fully automated. When a PR that changes the version in `manifest.json` is merged to `main`:
 
-   ## [2.1.0] - 2026-04-15
-   ### Added
-   - ...
-   ```
-2. Update `version` in `custom_components/wiener_netze_smart_meter/manifest.json`
-3. Commit: `Bump version to 2.1.0`
-4. Tag and push: `git tag v2.1.0 && git push && git push --tags`
-5. GitHub Action creates the release automatically using CHANGELOG.md notes
-6. HACS picks up the new release
+1. The `Validate` workflow runs (ruff, hassfest, HACS validation)
+2. On success, the `Auto Release` workflow creates a git tag and GitHub release
+3. Release notes are extracted from `CHANGELOG.md`
+4. HACS picks up the new release
+
+No manual tagging or release creation needed.
+
+### Dependabot PRs
+
+Dependabot PRs are auto-bumped: a workflow increments the patch version in `manifest.json` and prepends a changelog entry. Reviewers only need to approve and merge.
 
 ### Versioning
 
@@ -33,8 +34,22 @@
 - **MINOR** (2.1.0): New features (new role, new sensor, new config option)
 - **PATCH** (2.0.1): Bug fixes (timezone fix, auth fix, parsing fix)
 
+### Changelog Format
+
+```
+## X.Y.Z
+
+- Description of change
+- Another change
+```
+
+- No `[Unreleased]` section — every changelog entry ships with a version bump
+- Version headers: `## X.Y.Z` (no brackets, no dates)
+- Flat bullet points (no subcategory headers like `### Fixed`)
+- Prefix bullets with context if helpful: `- Fix: ...`, `- Add: ...`
+
 ### Code Style
 
-- Enforced by [Ruff](https://docs.astral.sh/ruff/) -- runs in CI
+- Enforced by [Ruff](https://docs.astral.sh/ruff/) — runs in CI
 - Run locally: `pip install ruff && ruff check . --fix && ruff format .`
 - See `pyproject.toml` for rule configuration

@@ -1,4 +1,4 @@
-name: CI
+name: Validate
 
 on:
   push:
@@ -34,3 +34,21 @@ jobs:
         with:
           category: integration
           ignore: brands
+
+  gate:
+    name: gate
+    needs: [ruff, hassfest, hacs]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check validation results
+        run: |
+          if [[ "${{ needs.ruff.result }}" == "success" && \
+                "${{ needs.hassfest.result }}" == "success" && \
+                "${{ needs.hacs.result }}" == "success" ]]; then
+            echo "All checks passed"
+            exit 0
+          else
+            echo "One or more checks failed"
+            exit 1
+          fi

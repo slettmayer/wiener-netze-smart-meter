@@ -53,12 +53,14 @@ None. The integration is installed as a raw directory drop-in under `custom_comp
 - Run locally: `ruff check . && ruff format . --check`
 
 ### CI/CD
-- **CI** (`.github/workflows/ci.yml`): triggers on push to `main` and all PRs. Three parallel jobs:
+- **Validate** (`.github/workflows/validate.yml`): triggers on push to `main` and all PRs. Three parallel jobs + gate:
   - `ruff` -- lint and format check (Python 3.12)
   - `hassfest` -- validates `manifest.json`, translations, services against HA integration requirements
   - `hacs` -- validates HACS compatibility (`ignore: brands` since no icon asset)
-- **Release** (`.github/workflows/release.yml`): triggers on `v*` tag push. Extracts version-specific notes from `CHANGELOG.md` via `awk` and creates a GitHub Release via `softprops/action-gh-release@v2`
-- **Release process**: documented in [CONTRIBUTING.md](../../CONTRIBUTING.md) -- update CHANGELOG, bump `manifest.json` version, tag, push
+  - `gate` -- single required status check, passes only if all three above succeed
+- **Release** (`.github/workflows/release.yml`): triggers via `workflow_run` after Validate succeeds on `main`. Extracts version from `manifest.json`, creates git tag + GitHub Release with notes from `CHANGELOG.md`
+- **Dependabot** (`.github/workflows/dependabot-version-bump.yml`): auto-bumps patch version in `manifest.json` and prepends changelog entry on Dependabot PRs
+- **Release process**: documented in [CONTRIBUTING.md](../../CONTRIBUTING.md) -- bump version + changelog in PR, merge triggers auto-release
 
 ### Testing
 No test framework, test files, or test dependencies present.
