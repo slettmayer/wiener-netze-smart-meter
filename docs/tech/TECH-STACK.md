@@ -16,17 +16,17 @@ Documents the languages, frameworks, libraries, API patterns, and runtime depend
 
 ### Language
 - Python 3 (requires 3.12+; ruff `target-version = "py312"`)
-- Uses `X | Y` union type syntax (Python 3.10+), `zoneinfo` (Python 3.9+), `datetime.UTC` alias (Python 3.11+)
+- Uses `X | Y` union type syntax (Python 3.10+), `datetime.UTC` alias (Python 3.11+)
 
 ### Framework
 - **Home Assistant Custom Component** following the `custom_components/<domain>/` layout
-- Key HA patterns used: `ConfigFlow`, `DataUpdateCoordinator`, `CoordinatorEntity`, `SensorEntity`, external statistics via `async_add_external_statistics`
+- Key HA patterns used: `ConfigFlow`, `DataUpdateCoordinator`, `CoordinatorEntity`, `SensorEntity`, external statistics via `async_add_external_statistics`, `ServiceResponse` + `SupportsResponse.OPTIONAL` for service return values
 - `manifest.json` declares `"dependencies": ["recorder"]` and `"config_flow": true`
 
 ### Runtime Libraries (provided by HA)
 - `aiohttp` -- async HTTP client for all API communication
 - `voluptuous` -- schema validation for config flow forms and service call payloads
-- `homeassistant.components.recorder` -- external statistics insertion
+- `homeassistant.components.recorder` -- external statistics insertion (`async_add_external_statistics`, `get_last_statistics`, `StatisticMeanType`)
 
 ### API Communication
 The integration acts as an HTTP client consuming two external REST APIs:
@@ -59,7 +59,7 @@ None. The integration is installed as a raw directory drop-in under `custom_comp
   - `hacs` -- validates HACS compatibility (`ignore: brands` since no icon asset)
   - `gate` -- single required status check, passes only if all three above succeed
 - **Release** (`.github/workflows/release.yml`): triggers via `workflow_run` after Validate succeeds on `main`. Extracts version from `manifest.json`, creates git tag + GitHub Release with notes from `CHANGELOG.md`
-- **Dependabot** (`.github/workflows/dependabot-version-bump.yml`): auto-bumps patch version in `manifest.json` and prepends changelog entry on Dependabot PRs
+- **Dependabot** (`.github/workflows/dependabot-version-bump.yml`): monitors GitHub Actions versions only (no Python packages tracked); auto-bumps patch version in `manifest.json` and prepends changelog entry on Dependabot PRs
 - **Release process**: documented in [CONTRIBUTING.md](../../CONTRIBUTING.md) -- bump version + changelog in PR, merge triggers auto-release
 
 ### Testing
@@ -81,7 +81,7 @@ No test framework, test files, or test dependencies present.
 
 ## Known Risks
 - No automated tests to catch regressions (CI covers linting and validation only)
-- PKCE implementation is hand-rolled rather than using a vetted library
+- PKCE implementation is hand-rolled with static `state` and `nonce` values (non-compliant with CSRF/replay protections beyond the code challenge itself)
 
 ## Extension Guidelines
 - New dependencies should be HA-provided where possible; if external, add to `manifest.json` `"requirements"` list

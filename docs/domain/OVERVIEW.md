@@ -32,7 +32,7 @@ Smart home / energy management integration. Bridges the Wiener Netze utility por
 
 **Zaehlwerk/Messwert (Meter Reading)** -- Cumulative counter value on the physical meter. Monotonically increasing float in kWh.
 
-**Hourly Statistics** -- Aggregated output unit. 15-minute Bewegungsdaten summed into hourly buckets, accumulated into daily-resetting cumulative sums, inserted as HA external statistics.
+**Hourly Statistics** -- Aggregated output unit. 15-minute Bewegungsdaten summed into hourly buckets, accumulated into monotonically increasing cumulative sums (continued from last persisted sum in recorder), inserted as HA external statistics.
 
 **External Statistic** -- HA recorder concept for data from outside HA's sensor history. Identified by `wiener_netze_smart_meter:{role_name}_{zpn_suffix}` (e.g. `wiener_netze_smart_meter:total_15444485`).
 
@@ -55,8 +55,8 @@ Smart home / energy management integration. Bridges the Wiener Netze utility por
 - **Authentication**: Owns both auth paths (cookie PKCE, password grant). Produces Bearer token. Depends on: Keycloak endpoints at log.wien.
 - **API Data Fetching**: Owns HTTP calls to Wiener Netze API endpoints. Parses JSON to Python dicts. Depends on: access token, aiohttp session.
 - **Data Aggregation & Statistics**: Owns transformation pipeline: raw 15-min records -> hourly sums -> daily-resetting cumulative sums -> HA external statistics. Depends on: api_client, HA recorder, HA timezone config.
-- **Sensor Entities**: Read-only views over coordinator data. Two sensors per meter: diagnostic (last import timestamp) and meter reading (cumulative kWh).
-- **Service Action**: Owns `fetch_data` service. Iterates all coordinators. Triggered by HA automations.
+- **Sensor Entities**: Read-only views over coordinator data. Two sensors per meter: diagnostic (last import timestamp + `last_run` status attributes including success, error, start/end) and meter reading (cumulative kWh).
+- **Service Action**: Owns `fetch_data` service with `SupportsResponse.OPTIONAL`. Iterates all coordinators, aggregates errors, returns structured JSON status (`success`, `start`, `end`, optional `error`). Raises `HomeAssistantError` on failure. Triggered by HA automations.
 - **Configuration Flow**: Two-step UI flow with live credential validation. Deduplicates by Zaehlpunktnummer.
 
 ### External Integrations
@@ -68,8 +68,7 @@ Smart home / energy management integration. Bridges the Wiener Netze utility por
 ### Data Timing
 - Wiener Netze data can be delayed 2-7 days from the actual consumption date
 - Fetching 7 days covers the typical delay window
-- Cumulative sums reset to 0 each calendar day at midnight (local time)
-- HA Energy Dashboard handles daily-resetting meters natively
+- Cumulative sums are monotonically increasing (never reset); the recorder tracks the last known sum and new hours continue from that point
 
 ## Dependencies
 - Austrian smart metering data format conventions (Energiewirtschaft)
@@ -77,7 +76,7 @@ Smart home / energy management integration. Bridges the Wiener Netze utility por
 - log.wien Keycloak session management
 
 ## Design Decisions
-- Daily-resetting cumulative sums rather than monotonically increasing totals. Rationale: HA Energy Dashboard handles daily resets natively; avoids complex state management across days.
+- Monotonically increasing cumulative sums continued from the last persisted sum in the recorder. Rationale: daily-resetting sums caused negative spikes with `stat_type: change`; monotonic sums work correctly with HA Energy Dashboard's diff-based consumption calculation.
 - Three sequential API calls per fetch (one per role). Roles are independent data streams from the same endpoint.
 - KEYCLOAK_IDENTITY cookie as primary auth. Rationale: simpler than password flow; avoids issues with Keycloak client support for resource owner password grant.
 
