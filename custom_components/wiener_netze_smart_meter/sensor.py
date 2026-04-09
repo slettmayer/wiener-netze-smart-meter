@@ -53,10 +53,17 @@ class SmartMeterDiagnosticSensor(CoordinatorEntity[SmartMeterCoordinator], Senso
 
     @property
     def extra_state_attributes(self) -> dict:
-        if self.coordinator.data is None:
-            return {}
-        stats_count = self.coordinator.data.get("stats_count", {})
-        return {f"imported_hours_{k}": v for k, v in stats_count.items()}
+        attrs: dict = {}
+        if self.coordinator.data is not None:
+            stats_count = self.coordinator.data.get("stats_count", {})
+            attrs.update({f"imported_hours_{k}": v for k, v in stats_count.items()})
+        last_run = self.coordinator.last_run
+        if last_run is not None:
+            attrs["last_run_success"] = last_run.get("success")
+            attrs["last_run_error"] = last_run.get("error")
+            attrs["last_run_start"] = last_run.get("start")
+            attrs["last_run_end"] = last_run.get("end")
+        return attrs
 
 
 class SmartMeterReadingSensor(CoordinatorEntity[SmartMeterCoordinator], SensorEntity):

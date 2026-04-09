@@ -16,7 +16,7 @@ from homeassistant.components.recorder.statistics import (
 )
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryAuthFailed
+from homeassistant.exceptions import ConfigEntryAuthFailed, HomeAssistantError
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 
 from .api_client import ApiError, AuthenticationError, WienerNetzeApiClient
@@ -45,6 +45,7 @@ class SmartMeterCoordinator(DataUpdateCoordinator[dict]):
         self._geschaeftspartner = entry.data[CONF_GESCHAEFTSPARTNER]
         self._zaehlpunktnummer = entry.data[CONF_ZAEHLPUNKTNUMMER]
         self._fetch_days = DEFAULT_FETCH_DAYS
+        self.last_run: dict | None = None
 
         super().__init__(
             hass,
@@ -53,10 +54,29 @@ class SmartMeterCoordinator(DataUpdateCoordinator[dict]):
             update_interval=None,  # No automatic polling — triggered via service action
         )
 
-    async def async_fetch(self, days: int) -> None:
-        """Fetch data for the given number of days and update sensors."""
+    async def async_fetch(self, days: int) -> dict:
+        """Fetch data for the given number of days and return status."""
         self._fetch_days = days
+        start = datetime.now(UTC)
         await self.async_refresh()
+        end = datetime.now(UTC)
+
+        if self.last_update_success:
+            self.last_run = {
+                "start": start.isoformat(),
+                "end": end.isoformat(),
+                "success": True,
+            }
+            return self.last_run
+
+        error_msg = str(self.last_exception) if self.last_exception else "Unknown error"
+        self.last_run = {
+            "start": start.isoformat(),
+            "end": end.isoformat(),
+            "success": False,
+            "error": error_msg,
+        }
+        raise HomeAssistantError(f"Smart meter data fetch failed: {error_msg}")
 
     async def _async_update_data(self) -> dict:
         """Authenticate, fetch data, aggregate, and insert statistics."""

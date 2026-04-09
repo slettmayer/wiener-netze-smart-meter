@@ -4,7 +4,8 @@ import logging
 
 import voluptuous as vol
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant, ServiceCall
+from homeassistant.core import HomeAssistant, ServiceCall, ServiceResponse, SupportsResponse
+from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
 from .api_client import WienerNetzeApiClient
@@ -49,15 +50,38 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     # Register service if not already registered
     if not hass.services.has_service(DOMAIN, SERVICE_FETCH_DATA):
 
-        async def handle_fetch_data(call: ServiceCall) -> None:
+        async def handle_fetch_data(call: ServiceCall) -> ServiceResponse:
             """Handle the fetch_data service call."""
             days = call.data.get(SERVICE_ATTR_DAYS, DEFAULT_FETCH_DAYS)
             _LOGGER.info("Service call: fetching %d days of data", days)
 
-            for coordinator in hass.data.get(DOMAIN, {}).values():
-                await coordinator.async_fetch(days)
+            coordinators = list(hass.data.get(DOMAIN, {}).values())
+            if not coordinators:
+                raise HomeAssistantError("No Wiener Netze Smart Meter instances configured")
 
-        hass.services.async_register(DOMAIN, SERVICE_FETCH_DATA, handle_fetch_data, schema=SERVICE_SCHEMA)
+            results = []
+            errors = []
+            for coordinator in coordinators:
+                try:
+                    result = await coordinator.async_fetch(days)
+                    results.append(result)
+                except HomeAssistantError as err:
+                    errors.append(str(err))
+
+            if errors:
+                raise HomeAssistantError("; ".join(errors))
+
+            if len(results) == 1:
+                return results[0]
+            return {"meters": results, "success": True}
+
+        hass.services.async_register(
+            DOMAIN,
+            SERVICE_FETCH_DATA,
+            handle_fetch_data,
+            schema=SERVICE_SCHEMA,
+            supports_response=SupportsResponse.OPTIONAL,
+        )
 
     return True
 
