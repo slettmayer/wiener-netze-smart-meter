@@ -59,10 +59,10 @@ No circular imports exist. Dependency direction is strictly downward.
 
 ### Module Responsibilities
 
-- **`__init__.py`**: Wires coordinator to config entry lifecycle (`async_setup_entry`, `async_unload_entry`). Registers `wiener_netze_smart_meter.fetch_data` service. Iterates all configured coordinators on service call.
+- **`__init__.py`**: Wires coordinator to config entry lifecycle (`async_setup_entry`, `async_unload_entry`). Registers `wiener_netze_smart_meter.fetch_data` service with `SupportsResponse.OPTIONAL`. Iterates all configured coordinators on service call, aggregates errors, returns structured JSON status response.
 - **`api_client.py`**: Owns all HTTP communication. Two auth flows (cookie PKCE, password grant). Two data endpoints (bewegungsdaten, meterReading). Raises `AuthenticationError` and `ApiError`. Stateless -- no internal state caching.
-- **`coordinator.py`**: Extends `DataUpdateCoordinator[dict]` with `update_interval=None`. `async_fetch(days)` orchestrates: authenticate, fetch 3 roles sequentially + meter reading, aggregate 15-min to hourly, compute daily-resetting cumulative sums, insert external statistics, update sensor data dict.
-- **`sensor.py`**: Two entity classes (`SmartMeterDiagnosticSensor`, `SmartMeterReadingSensor`). Both extend `CoordinatorEntity` and read from `self.coordinator.data`. No independent state.
+- **`coordinator.py`**: Extends `DataUpdateCoordinator[dict]` with `update_interval=None`. `async_fetch(days)` orchestrates: authenticate, fetch 3 roles sequentially + meter reading, aggregate 15-min to hourly, build monotonically increasing cumulative sums (continued from last persisted sum in recorder), insert external statistics, update sensor data dict. Maintains `last_run: dict | None` as secondary state (start, end, success, error). Raises `HomeAssistantError` on fetch failure.
+- **`sensor.py`**: Two entity classes (`SmartMeterDiagnosticSensor`, `SmartMeterReadingSensor`). Both extend `CoordinatorEntity`. Reading sensor reads from `self.coordinator.data`. Diagnostic sensor reads both `self.coordinator.data` (last import, stats counts) and `self.coordinator.last_run` (success, error, start/end timestamps) via `extra_state_attributes`. No independent state.
 - **`config_flow.py`**: Two-step `ConfigFlow` (`async_step_user` -> `async_step_credentials`). Validates credentials live. Deduplicates by Zaehlpunktnummer as unique ID.
 - **`const.py`**: Single source of truth for all string constants, URLs, role codes, config keys, defaults. No inline literals in other modules.
 
@@ -73,9 +73,12 @@ No circular imports exist. Dependency direction is strictly downward.
 3. Coordinator authenticates via `api_client` (produces Bearer token)
 4. Coordinator calls API sequentially for each role (V002, G001, G003) + meter reading
 5. Raw 15-minute Bewegungsdaten are aggregated to hourly sums (`_aggregate_to_hourly`)
-6. Hourly values are accumulated into daily-resetting cumulative sums
+6. Last known cumulative sum is fetched from recorder; hourly values are accumulated into a monotonically increasing sum
 7. Statistics inserted into HA recorder via `async_add_external_statistics`
-8. Sensor entities read latest values from coordinator data dict
+8. Coordinator stores run metadata in `last_run` (success/error/timestamps)
+9. On failure, `async_fetch` raises `HomeAssistantError`; `__init__.py` aggregates errors across coordinators and re-raises
+10. Sensor entities read latest values from coordinator data dict and `last_run`
+11. Service returns structured JSON status response to caller
 
 ### Multi-Meter Support
 

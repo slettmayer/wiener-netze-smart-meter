@@ -65,7 +65,7 @@ Config flow: `AuthenticationError` -> `errors["base"] = "invalid_auth"`; bare `E
 
 ### Constants Management
 
-All magic strings, URLs, role codes, config keys, and defaults are defined in `const.py`. No inline string literals appear in other modules.
+All magic strings, URLs, role codes, config keys, and defaults are defined in `const.py`. No inline string literals appear in other modules. Aggregate structures `ROLES` (list of role codes) and `ROLE_NAMES` (dict mapping role codes to human-readable names used in statistic IDs) are the primary exports consumed by `coordinator.py`.
 
 ## Dependencies
 - PEP 8 (de facto style guide)
