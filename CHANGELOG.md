@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.4.0
+
+- fetch_data service action now fails visibly on authentication and critical errors
+- fetch_data returns status JSON response (start, end, success) via SupportsResponse
+- Diagnostic sensor exposes last run status, error flag, and error message in attributes
+
 ## 2.3.0
 
 - Automate releases: version change in manifest.json triggers tag + GitHub release after validation passes

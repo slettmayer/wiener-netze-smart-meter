@@ -1,6 +1,7 @@
 fetch_data:
   name: Fetch Smart Meter Data
   description: Fetch energy consumption data from Wiener Netze for the specified number of past days and insert hourly statistics.
+  supports_response: optional
   fields:
     days:
       name: Days
