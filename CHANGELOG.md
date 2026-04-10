@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.4.1
+
+- Fix: import status sensor missing last_run attributes due to listener notification timing
+
 ## 2.4.0
 
 - fetch_data service action now fails visibly on authentication and critical errors
