@@ -67,6 +67,7 @@ class SmartMeterCoordinator(DataUpdateCoordinator[dict]):
                 "end": end.isoformat(),
                 "success": True,
             }
+            self.async_set_updated_data(self.data)
             return self.last_run
 
         error_msg = str(self.last_exception) if self.last_exception else "Unknown error"
@@ -76,6 +77,7 @@ class SmartMeterCoordinator(DataUpdateCoordinator[dict]):
             "success": False,
             "error": error_msg,
         }
+        self.async_update_listeners()
         raise HomeAssistantError(f"Smart meter data fetch failed: {error_msg}")
 
     async def _async_update_data(self) -> dict:
