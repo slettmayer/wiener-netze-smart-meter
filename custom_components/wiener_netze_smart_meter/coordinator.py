@@ -12,7 +12,7 @@ from homeassistant.components.recorder.models import (
 )
 from homeassistant.components.recorder.statistics import (
     async_add_external_statistics,
-    get_last_statistics,
+    statistics_during_period,
 )
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
@@ -168,32 +168,66 @@ class SmartMeterCoordinator(DataUpdateCoordinator[dict]):
             unit_of_measurement="kWh",
         )
 
-        # Get last known cumulative sum from recorder (sync DB call, use recorder executor)
-        last_stats = await get_instance(self.hass).async_add_executor_job(
-            get_last_statistics, self.hass, 1, statistic_id, True, {"sum"}
-        )
-        if statistic_id in last_stats and last_stats[statistic_id]:
-            last_sum = last_stats[statistic_id][0]["sum"]
-            last_start = datetime.fromtimestamp(last_stats[statistic_id][0]["start"], tz=UTC)
-        else:
-            last_sum = 0.0
-            last_start = datetime.min.replace(tzinfo=UTC)
+        # Find baseline cumulative sum from just before the earliest API hour.
+        # This allows backfilling hours that arrive out-of-order from the API.
+        earliest_hour = min(hourly)
+        baseline_sum = await self._get_baseline_sum(statistic_id, earliest_hour)
 
-        # Build statistics: state=hourly value, sum=monotonically increasing
-        cumulative = last_sum
+        # Build statistics for ALL hours in the API response.
+        # async_add_external_statistics does upsert: existing hours are updated,
+        # new hours (backfilled) are inserted. No data is skipped.
+        cumulative = baseline_sum
         statistics: list[StatisticData] = []
         for hour_start in sorted(hourly):
-            if hour_start <= last_start:
-                continue
             value = hourly[hour_start]
             cumulative += value
             statistics.append(StatisticData(start=hour_start, state=value, sum=cumulative))
 
         if statistics:
             async_add_external_statistics(self.hass, metadata, statistics)
-            _LOGGER.debug("Inserted %d external statistics for %s", len(statistics), statistic_id)
+            _LOGGER.debug(
+                "Inserted %d external statistics for %s (baseline_sum=%.3f)",
+                len(statistics),
+                statistic_id,
+                baseline_sum,
+            )
 
         return len(statistics)
+
+    async def _get_baseline_sum(self, statistic_id: str, before: datetime) -> float:
+        """Get the cumulative sum from the last recorded stat before a timestamp."""
+        recorder = get_instance(self.hass)
+
+        # Fast path: check the hour immediately before (common case with continuous data)
+        stats = await recorder.async_add_executor_job(
+            statistics_during_period,
+            self.hass,
+            before - timedelta(hours=1),
+            before,
+            {statistic_id},
+            "hour",
+            None,
+            {"sum"},
+        )
+        if stats.get(statistic_id):
+            return stats[statistic_id][-1]["sum"]
+
+        # Slow path: widen search for gaps in data
+        lookback = timedelta(days=max(self._fetch_days, 30))
+        stats = await recorder.async_add_executor_job(
+            statistics_during_period,
+            self.hass,
+            before - lookback,
+            before,
+            {statistic_id},
+            "hour",
+            None,
+            {"sum"},
+        )
+        if stats.get(statistic_id):
+            return stats[statistic_id][-1]["sum"]
+
+        return 0.0
 
 
 def _aggregate_to_hourly(values: list[dict]) -> dict[datetime, float]:

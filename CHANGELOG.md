@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.4.2
+
+- Fix: backfill late-arriving API data instead of silently discarding hours older than the last recorded statistic
+
 ## 2.4.1
 
 - Fix: import status sensor missing last_run attributes due to listener notification timing
