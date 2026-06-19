@@ -178,6 +178,10 @@ class WienerNetzeApiClient:
             "zeitpunktVon": zeitpunkt_von,
             "zeitpunktBis": zeitpunkt_bis,
             "aggregat": "NONE",
+            # Newly required by the API (HTTP 400 "Required parameter 'wandler' is
+            # not present" otherwise). Standard household meters are direct-measurement,
+            # not transformer (Wandler) meters, so this is always false.
+            "wandler": "false",
         }
         headers = {
             "Authorization": f"Bearer {access_token}",
