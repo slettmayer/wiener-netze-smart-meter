@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.5.1
+
+- Fix: send the now-mandatory `wandler=false` query parameter on bewegungsdaten requests — Wiener Netze began rejecting requests without it (HTTP 400 "Required parameter 'wandler' is not present")
+
 ## 2.5.0
 
 - Fix: send `Accept: application/json` header on API requests — Wiener Netze now rejects requests without it (HTTP 400, no data imported)
