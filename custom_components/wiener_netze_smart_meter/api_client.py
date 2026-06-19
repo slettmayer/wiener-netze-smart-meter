@@ -179,7 +179,10 @@ class WienerNetzeApiClient:
             "zeitpunktBis": zeitpunkt_bis,
             "aggregat": "NONE",
         }
-        headers = {"Authorization": f"Bearer {access_token}"}
+        headers = {
+            "Authorization": f"Bearer {access_token}",
+            "Accept": "application/json",
+        }
 
         try:
             resp = await self._session.get(BEWEGUNGSDATEN_ENDPOINT, params=params, headers=headers)
@@ -194,7 +197,7 @@ class WienerNetzeApiClient:
                 resp.status,
                 body,
             )
-            raise ApiError(f"Bewegungsdaten request failed for {rolle} (HTTP {resp.status})")
+            raise ApiError(f"Bewegungsdaten request failed for {rolle} (HTTP {resp.status}): {body[:300]}")
 
         data = await resp.json()
         values = data.get("values", [])
@@ -215,7 +218,10 @@ class WienerNetzeApiClient:
             "datetimeFrom": datetime_from,
             "datetimeTo": datetime_to,
         }
-        headers = {"Authorization": f"Bearer {access_token}"}
+        headers = {
+            "Authorization": f"Bearer {access_token}",
+            "Accept": "application/json",
+        }
 
         try:
             resp = await self._session.get(url, params=params, headers=headers)
@@ -225,7 +231,7 @@ class WienerNetzeApiClient:
         if resp.status != 200:
             body = await resp.text()
             _LOGGER.debug("Meter reading request failed: status=%s body=%s", resp.status, body)
-            raise ApiError(f"Meter reading request failed (HTTP {resp.status})")
+            raise ApiError(f"Meter reading request failed (HTTP {resp.status}): {body[:300]}")
 
         data = await resp.json()
         try:

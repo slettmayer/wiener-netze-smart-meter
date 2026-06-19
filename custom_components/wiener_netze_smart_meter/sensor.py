@@ -34,7 +34,7 @@ async def async_setup_entry(
 
 
 class SmartMeterDiagnosticSensor(CoordinatorEntity[SmartMeterCoordinator], SensorEntity):
-    """Sensor showing the last successful import timestamp."""
+    """Sensor showing the last run timestamp, with success details in attributes."""
 
     _attr_entity_category = EntityCategory.DIAGNOSTIC
     _attr_icon = "mdi:database-clock"
@@ -47,9 +47,10 @@ class SmartMeterDiagnosticSensor(CoordinatorEntity[SmartMeterCoordinator], Senso
 
     @property
     def native_value(self) -> str | None:
-        if self.coordinator.data is None:
+        last_run = self.coordinator.last_run
+        if last_run is None:
             return None
-        return self.coordinator.data.get("last_import")
+        return last_run.get("start")
 
     @property
     def extra_state_attributes(self) -> dict:
@@ -63,6 +64,7 @@ class SmartMeterDiagnosticSensor(CoordinatorEntity[SmartMeterCoordinator], Senso
             attrs["last_run_error"] = last_run.get("error")
             attrs["last_run_start"] = last_run.get("start")
             attrs["last_run_end"] = last_run.get("end")
+        attrs["last_run_success_time"] = self.coordinator.last_successful_run
         return attrs
 
 

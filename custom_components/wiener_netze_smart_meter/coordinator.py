@@ -46,6 +46,7 @@ class SmartMeterCoordinator(DataUpdateCoordinator[dict]):
         self._zaehlpunktnummer = entry.data[CONF_ZAEHLPUNKTNUMMER]
         self._fetch_days = DEFAULT_FETCH_DAYS
         self.last_run: dict | None = None
+        self.last_successful_run: str | None = None
 
         super().__init__(
             hass,
@@ -61,24 +62,44 @@ class SmartMeterCoordinator(DataUpdateCoordinator[dict]):
         await self.async_refresh()
         end = datetime.now(UTC)
 
-        if self.last_update_success:
-            self.last_run = {
-                "start": start.isoformat(),
-                "end": end.isoformat(),
-                "success": True,
-            }
-            self.async_set_updated_data(self.data)
-            return self.last_run
+        # A run is successful only if the coordinator completed and every role fetched
+        # without error. Per-role failures are swallowed in _async_update_data, so we
+        # consult result["success"] rather than relying on last_update_success alone.
+        data = self.data if isinstance(self.data, dict) else {}
+        succeeded = self.last_update_success and data.get("success", False)
 
-        error_msg = str(self.last_exception) if self.last_exception else "Unknown error"
+        error_msg = None
+        if not succeeded:
+            if not self.last_update_success:
+                error_msg = str(self.last_exception) if self.last_exception else "Unknown error"
+            else:
+                failed = data.get("failed_roles", [])
+                error_msg = f"Failed to fetch role(s): {', '.join(failed)}" if failed else "Fetch incomplete"
+
+        if succeeded:
+            self.last_successful_run = end.isoformat()
+
         self.last_run = {
             "start": start.isoformat(),
             "end": end.isoformat(),
-            "success": False,
+            "success": succeeded,
             "error": error_msg,
         }
-        self.async_update_listeners()
-        raise HomeAssistantError(f"Smart meter data fetch failed: {error_msg}")
+
+        if succeeded:
+            self.async_set_updated_data(self.data)
+            return self.last_run
+
+        # Not successful. Raise (failing the service call) only when nothing usable was
+        # imported: a hard coordinator failure, or every role failed. A partial failure
+        # keeps the data that did import and returns, flagged unsuccessful via last_run.
+        imported_anything = any(data.get("stats_count", {}).values())
+        if not self.last_update_success or not imported_anything:
+            self.async_update_listeners()
+            raise HomeAssistantError(f"Smart meter data fetch failed: {error_msg}")
+
+        self.async_set_updated_data(self.data)
+        return self.last_run
 
     async def _async_update_data(self) -> dict:
         """Authenticate, fetch data, aggregate, and insert statistics."""
@@ -96,6 +117,7 @@ class SmartMeterCoordinator(DataUpdateCoordinator[dict]):
             "fetch_days": self._fetch_days,
             "meter_reading": None,
             "stats_count": {},
+            "failed_roles": [],
         }
 
         # Fetch and insert statistics for each role
@@ -112,6 +134,7 @@ class SmartMeterCoordinator(DataUpdateCoordinator[dict]):
             except ApiError as err:
                 _LOGGER.warning("Failed to fetch %s: %s", rolle, err)
                 result["stats_count"][rolle] = 0
+                result["failed_roles"].append(rolle)
                 continue
 
             if not values:
@@ -145,6 +168,10 @@ class SmartMeterCoordinator(DataUpdateCoordinator[dict]):
                 _LOGGER.info("Latest meter reading: %s kWh", result["meter_reading"])
         except ApiError as err:
             _LOGGER.warning("Failed to fetch meter reading: %s", err)
+
+        # A run is successful only when every role fetched without error. Meter-reading
+        # failures are tolerated and do not affect success.
+        result["success"] = not result["failed_roles"]
 
         return result
 
