@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.5.0
+
+- Fix: send `Accept: application/json` header on API requests — Wiener Netze now rejects requests without it (HTTP 400, no data imported)
+- Fix: include the API response body in error messages so failures are diagnosable from the warning log
+- Import status sensor: state now reflects the last run (any outcome); `last_run_success`/`last_run_error` now correctly reflect per-role fetch failures (a run counts as successful only if all roles fetch); added `last_run_success_time` attribute showing the last successful run
+
 ## 2.4.2
 
 - Fix: backfill late-arriving API data instead of silently discarding hours older than the last recorded statistic

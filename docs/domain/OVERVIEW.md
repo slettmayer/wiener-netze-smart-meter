@@ -55,7 +55,7 @@ Smart home / energy management integration. Bridges the Wiener Netze utility por
 - **Authentication**: Owns both auth paths (cookie PKCE, password grant). Produces Bearer token. Depends on: Keycloak endpoints at log.wien.
 - **API Data Fetching**: Owns HTTP calls to Wiener Netze API endpoints. Parses JSON to Python dicts. Depends on: access token, aiohttp session.
 - **Data Aggregation & Statistics**: Owns transformation pipeline: raw 15-min records -> hourly sums -> daily-resetting cumulative sums -> HA external statistics. Depends on: api_client, HA recorder, HA timezone config.
-- **Sensor Entities**: Read-only views over coordinator data. Two sensors per meter: diagnostic (last import timestamp + `last_run` status attributes including success, error, start/end) and meter reading (cumulative kWh).
+- **Sensor Entities**: Read-only views over coordinator data. Two sensors per meter: diagnostic (last run timestamp as state + status attributes: success, error, start/end, and `last_run_success_time` for the last successful run) and meter reading (cumulative kWh).
 - **Service Action**: Owns `fetch_data` service with `SupportsResponse.OPTIONAL`. Iterates all coordinators, aggregates errors, returns structured JSON status (`success`, `start`, `end`, optional `error`). Raises `HomeAssistantError` on failure. Triggered by HA automations.
 - **Configuration Flow**: Two-step UI flow with live credential validation. Deduplicates by Zaehlpunktnummer.
 
