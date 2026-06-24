@@ -1,12 +1,16 @@
 {
   "domain": "wiener_netze_smart_meter",
   "name": "Wiener Netze Smart Meter",
-  "codeowners": ["@slettmayer"],
+  "codeowners": [
+    "@slettmayer"
+  ],
   "config_flow": true,
-  "dependencies": ["recorder"],
+  "dependencies": [
+    "recorder"
+  ],
   "documentation": "https://github.com/slettmayer/wiener-netze-smart-meter",
   "iot_class": "cloud_polling",
   "issue_tracker": "https://github.com/slettmayer/wiener-netze-smart-meter/issues",
   "requirements": [],
-  "version": "2.5.1"
+  "version": "2.5.2"
 }

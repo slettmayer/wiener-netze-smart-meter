@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.5.2
+
+- Bump dependency (Dependabot)
+
 ## 2.5.1
 
 - Fix: send the now-mandatory `wandler=false` query parameter on bewegungsdaten requests — Wiener Netze began rejecting requests without it (HTTP 400 "Required parameter 'wandler' is not present")
