@@ -2,6 +2,7 @@
 
 ## 2.5.2
 
+- Add MIT `LICENSE` file — required by HACS validation (unblocks the Validate + Auto Release pipelines)
 - Bump dependency (Dependabot)
 
 ## 2.5.1
