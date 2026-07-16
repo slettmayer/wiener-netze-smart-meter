@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.6.0
+
+- Add brand icon (`brand/` folder) so the integration shows its icon in the HA UI via the Brands Proxy API (HA 2026.3+)
+- Set `integration_type` to `service` in the manifest
+- Document installation via HACS in the README
+
 ## 2.5.2
 
 - Add MIT `LICENSE` file — required by HACS validation (unblocks the Validate + Auto Release pipelines)
