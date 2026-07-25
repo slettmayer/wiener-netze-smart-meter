@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.6.1
+
+- Bump dependency (Dependabot)
+
 ## 2.6.0
 
 - Add brand icon (`brand/` folder) so the integration shows its icon in the HA UI via the Brands Proxy API (HA 2026.3+)
