@@ -4,7 +4,7 @@
 ## Quick Reference
 - **Install**: Copy `custom_components/wiener_netze_smart_meter/` into HA's `custom_components/` directory, restart HA
 - **Test**: No automated tests configured
-- **Lint**: `ruff check . && ruff format . --check` (config in `pyproject.toml`)
+- **Lint**: `pip install -r requirements_lint.txt && ruff check . && ruff format . --check` (config in `pyproject.toml`; the ruff version is pinned so local and CI agree)
 
 ## Architecture Overview
 Standard Home Assistant custom component with flat module layout under `custom_components/wiener_netze_smart_meter/`. Strict one-way dependency chain:
@@ -40,7 +40,7 @@ Austrian smart meter energy integration. Fetches 15-minute Bewegungsdaten (consu
 ## CI/CD
 - **Validate**: ruff lint+format, hassfest, HACS validation + gate job on every push to `main` and PR (`.github/workflows/validate.yml`)
 - **Release**: auto-creates tag + GitHub release after validate succeeds on main when version changes (`.github/workflows/release.yml`)
-- **Dependabot**: monitors GitHub Actions versions only; auto-bumps patch version and changelog on Dependabot PRs (`.github/workflows/dependabot-version-bump.yml`)
+- **Dependabot**: monitors GitHub Actions versions and the `ruff` pin in `requirements_lint.txt`; auto-bumps patch version and changelog on Dependabot PRs (`.github/workflows/dependabot-version-bump.yml`)
 - **Dev workflow**: see [CONTRIBUTING.md](CONTRIBUTING.md) -- branch, lint, bump version + changelog in PR, merge triggers release
 - **HACS**: `hacs.json` present; installable via HACS
 

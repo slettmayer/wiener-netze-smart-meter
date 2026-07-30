@@ -8,3 +8,13 @@ updates:
       github-actions:
         patterns:
           - "*"
+  # Watches requirements_lint.txt. Without this the ruff pin is never bumped,
+  # and pinning without a bumper is how a linter silently goes stale.
+  - package-ecosystem: "pip"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    groups:
+      python-lint-deps:
+        patterns:
+          - "*"
