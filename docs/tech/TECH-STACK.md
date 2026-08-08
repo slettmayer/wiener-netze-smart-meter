@@ -44,7 +44,7 @@ The integration acts as an HTTP client consuming two external REST APIs:
 All HTTP I/O is async via the HA-managed shared `ClientSession` from `async_get_clientsession`.
 
 ### Build Tools
-None. The integration is installed as a raw directory drop-in under `custom_components/`. Also installable via HACS (`hacs.json` present).
+None. The integration is installed as a raw directory drop-in under `custom_components/`. Also installable via HACS (`hacs.json` present), which downloads a release archive -- see [The release archive](#the-release-archive----zip_release).
 
 ### Linting and Formatting
 - **Ruff** configured in `pyproject.toml`: `target-version = "py312"`, `line-length = 120`
@@ -56,11 +56,24 @@ None. The integration is installed as a raw directory drop-in under `custom_comp
 - **Validate** (`.github/workflows/validate.yml`): triggers on push to `main` and all PRs. Three parallel jobs + gate:
   - `ruff` -- lint and format check (Python 3.12)
   - `hassfest` -- validates `manifest.json`, translations, services against HA integration requirements
-  - `hacs` -- validates HACS compatibility (`ignore: brands` since no icon asset)
+  - `hacs` -- validates HACS compatibility (no ignored checks)
   - `gate` -- single required status check, passes only if all three above succeed
-- **Release** (`.github/workflows/release.yml`): triggers via `workflow_run` after Validate succeeds on `main`. Extracts version from `manifest.json`, creates git tag + GitHub Release with notes from `CHANGELOG.md`
+- **Release** (`.github/workflows/release.yml`): triggers via `workflow_run` after Validate succeeds on `main`. Extracts version from `manifest.json`, builds `wiener_netze_smart_meter.zip`, creates git tag + GitHub Release with notes from `CHANGELOG.md` and the archive attached
 - **Dependabot** (`.github/workflows/dependabot-version-bump.yml`): monitors GitHub Actions versions only (no Python packages tracked); auto-bumps patch version in `manifest.json` and prepends changelog entry on Dependabot PRs
 - **Release process**: documented in [CONTRIBUTING.md](../../CONTRIBUTING.md) -- bump version + changelog in PR, merge triggers auto-release
+
+#### The release archive -- `zip_release`
+
+`hacs.json` sets `zip_release: true` and `filename: "wiener_netze_smart_meter.zip"`, so HACS downloads that one asset from the release instead of fetching every file through the GitHub API. Two things constrain how the workflow builds it:
+
+- **The integration's files must sit at the archive root.** HACS does `zip_file.extractall(<config>/custom_components/wiener_netze_smart_meter)`, so a top-level `wiener_netze_smart_meter/` directory inside the zip would land as `custom_components/wiener_netze_smart_meter/wiener_netze_smart_meter/`. That is why the workflow `cd`s into the integration directory and zips `.`.
+- **The asset name must equal `filename` exactly.** HACS requests that one name from the release and fails the download if it is absent. Renaming one without the other breaks every install.
+
+The HACS action only checks that `filename` is set when `zip_release` is true -- it does **not** verify the asset exists on the latest release, so a broken archive step fails silently at install time, never in CI. The archive is therefore attached in the same `gh release create` call, so a release can never be published without it.
+
+The motive is measurement as much as speed: GitHub reports a `download_count` per release asset, and that is the only install signal this project has.
+
+Releases before 2.6.3 have no archive. Their tagged `hacs.json` has no `zip_release`, so HACS falls back to the file-by-file download for them -- downgrades keep working.
 
 ### Testing
 No test framework, test files, or test dependencies present.
