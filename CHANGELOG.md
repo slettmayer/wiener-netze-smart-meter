@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.6.3
+
+- Add: releases now carry a `wiener_netze_smart_meter.zip` asset and HACS installs from it (`zip_release` in `hacs.json`), instead of fetching every file individually through the GitHub API — faster, and it makes installs countable, since GitHub reports a download count per release asset
+- Nothing about the integration itself changed: same sensors, same service, no reconfiguration needed
+- Downgrading to 2.6.2 or earlier still works — those releases have no archive and their tagged `hacs.json` has no `zip_release`, so HACS falls back to the file-by-file download for them
+
 ## 2.6.2
 
 - Bump dependency (Dependabot)

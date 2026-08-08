@@ -39,10 +39,10 @@ Austrian smart meter energy integration. Fetches 15-minute Bewegungsdaten (consu
 
 ## CI/CD
 - **Validate**: ruff lint+format, hassfest, HACS validation + gate job on every push to `main` and PR (`.github/workflows/validate.yml`)
-- **Release**: auto-creates tag + GitHub release after validate succeeds on main when version changes (`.github/workflows/release.yml`)
+- **Release**: auto-creates tag + GitHub release after validate succeeds on main when version changes (`.github/workflows/release.yml`); the release carries a `wiener_netze_smart_meter.zip` asset built from the integration directory — its files must sit at the **archive root** and the asset name must match `filename` in `hacs.json` exactly, or HACS installs break silently (CI cannot catch either) -- see [TECH-STACK.md](docs/tech/TECH-STACK.md#the-release-archive----zip_release)
 - **Dependabot**: monitors GitHub Actions versions and the `ruff` pin in `requirements_lint.txt`; auto-bumps patch version and changelog on Dependabot PRs (`.github/workflows/dependabot-version-bump.yml`)
 - **Dev workflow**: see [CONTRIBUTING.md](CONTRIBUTING.md) -- branch, lint, bump version + changelog in PR, merge triggers release
-- **HACS**: `hacs.json` present; installable via HACS
+- **HACS**: `hacs.json` present; installable via HACS, which downloads the release archive (`zip_release`)
 
 ## Structural Risks
 - No automated tests (CI runs linting and validation only)

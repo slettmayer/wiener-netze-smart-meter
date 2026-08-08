@@ -1,4 +1,6 @@
 {
   "name": "Wiener Netze Smart Meter",
-  "render_readme": true
+  "render_readme": true,
+  "zip_release": true,
+  "filename": "wiener_netze_smart_meter.zip"
 }
