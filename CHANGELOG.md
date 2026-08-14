@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.6.4
+
+- Bump dependency (Dependabot)
+
 ## 2.6.3
 
 - Add: releases now carry a `wiener_netze_smart_meter.zip` asset and HACS installs from it (`zip_release` in `hacs.json`), instead of fetching every file individually through the GitHub API — faster, and it makes installs countable, since GitHub reports a download count per release asset
