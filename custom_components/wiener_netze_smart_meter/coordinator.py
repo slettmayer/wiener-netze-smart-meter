@@ -303,7 +303,9 @@ def _to_finite_float(value: object) -> float | None:
     """Convert an API value to float, or None when it is missing, not numeric, NaN or infinite."""
     try:
         number = float(value)
-    except (TypeError, ValueError):
+    except (TypeError, ValueError, OverflowError):
+        # OverflowError: json.loads turns an oversized integer literal into an int
+        # that does not fit a float.
         return None
     # float() accepts "nan" and "inf"; neither is a usable energy value, and the
     # recorder and the TOTAL_INCREASING sensor would both take them as real data.

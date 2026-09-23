@@ -87,7 +87,7 @@ def test_timestamps_with_an_offset_land_in_the_same_utc_hour():
     assert hourly == {LOCAL_MIDNIGHT: 1.5}
 
 
-@pytest.mark.parametrize("wert", ["n/a", "", [], {}, "nan", "inf", "-inf", float("nan")])
+@pytest.mark.parametrize("wert", ["n/a", "", [], {}, "nan", "inf", "-inf", float("nan"), 10**400])
 def test_a_non_numeric_value_is_skipped_not_raised(wert):
     values = _quarter_hours(LOCAL_MIDNIGHT, 4)
     values[1]["wert"] = wert
@@ -106,11 +106,10 @@ def test_meter_reading_is_parsed(reading, expected):
     assert _parse_meter_reading(reading) == expected
 
 
-@pytest.mark.parametrize(
-    "reading", [{}, {"messwert": None}, {"messwert": "n/a"}, {"messwert": "nan"}, {"messwert": float("inf")}]
-)
-def test_an_unusable_meter_reading_is_none_not_zero(reading):
+@pytest.mark.parametrize("messwert", ["missing", None, "n/a", "nan", float("inf"), 10**400], ids=lambda v: repr(v)[:20])
+def test_an_unusable_meter_reading_is_none_not_zero(messwert):
     """A missing counter value must not show up as a meter reading of 0 kWh."""
+    reading = {} if messwert == "missing" else {"messwert": messwert}
     assert _parse_meter_reading(reading) is None
 
 
