@@ -3,7 +3,7 @@
 
 ## Quick Reference
 - **Install**: Copy `custom_components/wiener_netze_smart_meter/` into HA's `custom_components/` directory, restart HA
-- **Test**: No automated tests configured
+- **Test**: `pip install -r requirements_test.txt && python -m pytest` (Python 3.14 per `.python-version`; `pytest-homeassistant-custom-component` pins the HA core version)
 - **Lint**: `pip install -r requirements_lint.txt && ruff check . && ruff format . --check` (config in `pyproject.toml`; the ruff version is pinned so local and CI agree)
 
 ## Architecture Overview
@@ -13,13 +13,13 @@ Standard Home Assistant custom component with flat module layout under `custom_c
 - `coordinator.py` -- DataUpdateCoordinator: fetch orchestration, aggregation, statistics insertion, error propagation via `HomeAssistantError`
 - `api_client.py` -- HTTP client: auth (cookie PKCE + password grant) and API calls
 - `sensor.py` -- read-only CoordinatorEntity sensors (diagnostic + meter reading)
-- `config_flow.py` -- two-step UI config flow with live credential validation
+- `config_flow.py` -- two-step UI config flow with live credential validation, plus a reauth flow for expired credentials
 - `const.py` -- all constants, URLs, role codes, config keys (single source of truth)
 
 Data flow: HA automation triggers `fetch_data` service -> coordinator authenticates -> fetches 3 roles sequentially + meter reading -> aggregates 15-min to hourly -> builds monotonically increasing sums -> inserts external statistics into HA recorder -> returns structured JSON status response.
 
 ## Tech Stack
-- Python 3.12+ (Home Assistant custom component; ruff targets `py312`)
+- Python 3.13+ at runtime (the Home Assistant 2025.11.0 floor in `hacs.json`); ruff targets `py312`; tests run on 3.14 (`.python-version`)
 - aiohttp for async HTTP (HA-provided)
 - voluptuous for schema validation (HA-provided)
 - HA Recorder for external statistics (`async_add_external_statistics`)
@@ -38,16 +38,16 @@ Data flow: HA automation triggers `fetch_data` service -> coordinator authentica
 Austrian smart meter energy integration. Fetches 15-minute Bewegungsdaten (consumption records) from Wiener Netze for three energy roles -- Total (V002), Grid/Restnetzbezug (G001), PV/Eigendeckung (G003) -- aggregates to hourly statistics with monotonically increasing cumulative sums for the HA Energy Dashboard. See [Domain Overview](docs/domain/OVERVIEW.md) for terminology and entity details.
 
 ## CI/CD
-- **Validate**: ruff lint+format, hassfest, HACS validation + gate job on every push to `main` and PR (`.github/workflows/validate.yml`)
+- **Validate**: ruff lint+format, pytest, hassfest, HACS validation + gate job on every push to `main` and PR (`.github/workflows/validate.yml`)
 - **Release**: auto-creates tag + GitHub release after validate succeeds on main when version changes (`.github/workflows/release.yml`); the release carries a `wiener_netze_smart_meter.zip` asset built from the integration directory — its files must sit at the **archive root** and the asset name must match `filename` in `hacs.json` exactly, or HACS installs break silently (CI cannot catch either) -- see [TECH-STACK.md](docs/tech/TECH-STACK.md#the-release-archive----zip_release)
 - **Dependabot**: monitors GitHub Actions versions and the `ruff` pin in `requirements_lint.txt`; auto-bumps patch version and changelog on Dependabot PRs (`.github/workflows/dependabot-version-bump.yml`)
 - **Dev workflow**: see [CONTRIBUTING.md](CONTRIBUTING.md) -- branch, lint, bump version + changelog in PR, merge triggers release
 - **HACS**: `hacs.json` present; installable via HACS, which downloads the release archive (`zip_release`)
 
 ## Structural Risks
-- No automated tests (CI runs linting and validation only)
+- Tests patch the API client, so nothing exercises the real Wiener Netze / log.wien HTTP contract
 - Hand-rolled PKCE implementation with static `state`/`nonce` values (non-compliant CSRF/replay protection)
-- KEYCLOAK_IDENTITY cookie expires periodically, requiring manual re-entry
+- KEYCLOAK_IDENTITY cookie expires periodically; users re-enter it through the reauth flow
 - All business logic concentrated in `coordinator.py`
 
 ## Detailed Guides

@@ -18,6 +18,15 @@
           "geschaeftspartner": "Geschaeftspartner (User ID)",
           "zaehlpunktnummer": "Zaehlpunktnummer (Meter Number)"
         }
+      },
+      "reauth_confirm": {
+        "title": "Re-authenticate Wiener Netze Smart Meter",
+        "description": "The stored credentials for meter {zaehlpunktnummer} no longer work. For cookie auth, copy a fresh KEYCLOAK_IDENTITY cookie from the Wiener Netze Smart Meter portal using browser developer tools.",
+        "data": {
+          "keycloak_identity": "KEYCLOAK_IDENTITY Cookie",
+          "username": "Username (Email)",
+          "password": "Password"
+        }
       }
     },
     "error": {
@@ -25,7 +34,8 @@
       "cannot_connect": "Cannot connect to Wiener Netze API."
     },
     "abort": {
-      "already_configured": "This meter is already configured."
+      "already_configured": "This meter is already configured.",
+      "reauth_successful": "Re-authentication was successful."
     }
   }
 }

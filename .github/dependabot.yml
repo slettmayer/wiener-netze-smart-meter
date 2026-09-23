@@ -8,8 +8,10 @@ updates:
       github-actions:
         patterns:
           - "*"
-  # Watches requirements_lint.txt. Without this the ruff pin is never bumped,
-  # and pinning without a bumper is how a linter silently goes stale.
+  # Watches requirements_lint.txt and requirements_test.txt. Without this the
+  # pins are never bumped, and pinning without a bumper is how tooling silently
+  # goes stale. Kept as one group so a ruff bump and a test-harness bump that
+  # land the same week arrive as one PR.
   - package-ecosystem: "pip"
     directory: "/"
     schedule:

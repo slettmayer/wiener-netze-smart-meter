@@ -76,7 +76,10 @@ The motive is measurement as much as speed: GitHub reports a `download_count` pe
 Releases before 2.6.3 have no archive. Their tagged `hacs.json` has no `zip_release`, so HACS falls back to the file-by-file download for them -- downgrades keep working.
 
 ### Testing
-No test framework, test files, or test dependencies present.
+- `pytest` with `pytest-homeassistant-custom-component`, pinned in `requirements_test.txt` (the pin fixes the HA core version tests run against); Python version in `.python-version`
+- `tests/conftest.py` starts an in-memory recorder for every test, because the manifest depends on `recorder`
+- The API client is patched in tests; statistics go through the real recorder and are read back with `statistics_during_period`
+- CI runs the suite in the `pytest` job of `validate.yml`
 
 ### Infrastructure
 - MCP server (`ha-mcp`) in `.mcp.json` connects Claude tooling to a live HA instance for development
@@ -93,7 +96,7 @@ No test framework, test files, or test dependencies present.
 - No separate `requirements` declaration -- all dependencies are provided by HA runtime
 
 ## Known Risks
-- No automated tests to catch regressions (CI covers linting and validation only)
+- Tests patch the API client, so a change in the Wiener Netze or log.wien HTTP contract is not caught by CI
 - PKCE implementation is hand-rolled with static `state` and `nonce` values (non-compliant with CSRF/replay protections beyond the code challenge itself)
 
 ## Extension Guidelines

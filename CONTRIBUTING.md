@@ -6,10 +6,10 @@
 
 1. Create a feature branch from `main`
 2. Make your changes
-3. Run linting locally: `ruff check . && ruff format . --check`
+3. Run linting and tests locally: `ruff check . && ruff format . --check && python -m pytest` (test deps: `pip install -r requirements_test.txt`, Python 3.14)
 4. Bump `version` in `custom_components/wiener_netze_smart_meter/manifest.json`
 5. Add a new `## X.Y.Z` section at the top of `CHANGELOG.md` with your changes
-6. Create a PR — CI runs automatically (ruff, hassfest, HACS validation)
+6. Create a PR — CI runs automatically (ruff, pytest, hassfest, HACS validation)
 7. Merge PR (squash)
 8. Release is created automatically after validation passes on `main`
 

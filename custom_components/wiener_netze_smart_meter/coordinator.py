@@ -51,6 +51,7 @@ class SmartMeterCoordinator(DataUpdateCoordinator[dict]):
         super().__init__(
             hass,
             _LOGGER,
+            config_entry=entry,
             name=DOMAIN,
             update_interval=None,  # No automatic polling — triggered via service action
         )
@@ -162,12 +163,11 @@ class SmartMeterCoordinator(DataUpdateCoordinator[dict]):
                 von,
                 bis,
             )
-            if readings:
-                latest = readings[-1]
-                result["meter_reading"] = float(latest.get("messwert", 0))
-                _LOGGER.info("Latest meter reading: %s kWh", result["meter_reading"])
         except ApiError as err:
             _LOGGER.warning("Failed to fetch meter reading: %s", err)
+        else:
+            if readings:
+                result["meter_reading"] = _parse_meter_reading(readings[-1])
 
         # A run is successful only when every role fetched without error. Meter-reading
         # failures are tolerated and do not affect success.
@@ -275,7 +275,26 @@ def _aggregate_to_hourly(values: list[dict]) -> dict[datetime, float]:
             _LOGGER.debug("Could not parse timestamp: %s", zeitpunkt)
             continue
 
+        try:
+            kwh = float(wert)
+        except (TypeError, ValueError):
+            _LOGGER.debug("Could not parse value %r at %s", wert, zeitpunkt)
+            continue
+
         hour_start = ts.replace(minute=0, second=0, microsecond=0)
-        hourly[hour_start] += float(wert)
+        hourly[hour_start] += kwh
 
     return dict(hourly)
+
+
+def _parse_meter_reading(reading: dict) -> float | None:
+    """Return the reading's counter value in kWh, or None when it is missing or not numeric."""
+    messwert = reading.get("messwert")
+    try:
+        value = float(messwert)
+    except (TypeError, ValueError):
+        _LOGGER.warning("Ignoring meter reading with unusable value: %r", messwert)
+        return None
+
+    _LOGGER.info("Latest meter reading: %s kWh", value)
+    return value

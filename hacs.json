@@ -1,5 +1,6 @@
 {
   "name": "Wiener Netze Smart Meter",
+  "homeassistant": "2025.11.0",
   "render_readme": true,
   "zip_release": true,
   "filename": "wiener_netze_smart_meter.zip"
