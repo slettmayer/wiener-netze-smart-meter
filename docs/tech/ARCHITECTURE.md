@@ -21,7 +21,7 @@ Documents the project structure, module boundaries, layering, and data flow of t
 custom_components/wiener_netze_smart_meter/
     __init__.py        # Entry setup, teardown, service registration
     api_client.py      # External API communication and authentication
-    config_flow.py     # UI-driven config entry flow (2-step)
+    config_flow.py     # UI-driven config entry flow (2-step) + reauth
     const.py           # All constants, URLs, role codes, config keys
     coordinator.py     # DataUpdateCoordinator: fetch, aggregate, insert stats
     sensor.py          # SensorEntity definitions backed by coordinator
@@ -52,7 +52,7 @@ api_client.py (HTTP client: auth + data fetch)
 const.py (constants: URLs, keys, roles)
 
 sensor.py --> coordinator.py (read-only view over coordinator data)
-config_flow.py --> api_client.py (credential validation during setup)
+config_flow.py --> api_client.py (credential validation during setup and reauth)
 ```
 
 No circular imports exist. Dependency direction is strictly downward.
@@ -63,7 +63,7 @@ No circular imports exist. Dependency direction is strictly downward.
 - **`api_client.py`**: Owns all HTTP communication. Two auth flows (cookie PKCE, password grant). Two data endpoints (bewegungsdaten, meterReading). Raises `AuthenticationError` and `ApiError`. Stateless -- no internal state caching.
 - **`coordinator.py`**: Extends `DataUpdateCoordinator[dict]` with `update_interval=None`. `async_fetch(days)` orchestrates: authenticate, fetch 3 roles sequentially + meter reading, aggregate 15-min to hourly, build monotonically increasing cumulative sums (continued from last persisted sum in recorder), insert external statistics, update sensor data dict. Maintains `last_run: dict | None` (start, end, success, error) and `last_successful_run: str | None` (timestamp) as secondary state. A run counts as successful only if every role fetched without error. Raises `HomeAssistantError` when nothing usable imported (hard failure or all roles failed); partial failures return but are flagged unsuccessful.
 - **`sensor.py`**: Two entity classes (`SmartMeterDiagnosticSensor`, `SmartMeterReadingSensor`). Both extend `CoordinatorEntity`. Reading sensor reads from `self.coordinator.data`. Diagnostic sensor state is the last run timestamp (`last_run["start"]`, any outcome); `extra_state_attributes` expose stats counts (from `self.coordinator.data`), `last_run` status (success, error, start/end), and `last_run_success_time` (from `self.coordinator.last_successful_run`). No independent state.
-- **`config_flow.py`**: Two-step `ConfigFlow` (`async_step_user` -> `async_step_credentials`). Validates credentials live. Deduplicates by Zaehlpunktnummer as unique ID.
+- **`config_flow.py`**: Two-step `ConfigFlow` (`async_step_user` -> `async_step_credentials`). Validates credentials live. Deduplicates by Zaehlpunktnummer as unique ID. `async_step_reauth` -> `async_step_reauth_confirm` asks again for the credentials of the entry's auth method (cookie, or username + password with the username prefilled), validates them, and calls `async_update_reload_and_abort` -- the entry has no update listener, so the flow owns the reload.
 - **`const.py`**: Single source of truth for all string constants, URLs, role codes, config keys, defaults. No inline literals in other modules.
 
 ### Data Flow

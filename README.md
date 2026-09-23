@@ -7,7 +7,7 @@ Home Assistant custom component that fetches energy consumption data from the Wi
 - Fetches 15-minute interval data from Wiener Netze, aggregates to hourly values
 - Three energy roles: **Total** (V002), **Grid/Restnetzbezug** (G001), **PV/Eigendeckung** (G003)
 - Inserts **external statistics** for the HA Energy Dashboard — no conflicts with HA's auto-recorded statistics
-- Timezone-correct day grouping — cumulative sums reset at local midnight (handles CET/CEST automatically)
+- Hourly statistics keyed on the UTC timestamps the API delivers — the Energy Dashboard groups them by your local day (CET/CEST) when it displays them
 - Meter reading sensor showing the current counter value (kWh)
 - Diagnostic sensor showing last import timestamp
 - Service action `wiener_netze_smart_meter.fetch_data` with configurable `days` parameter — no automatic polling, fully controlled via HA automations
@@ -104,5 +104,5 @@ If upgrading from a version that used entity-linked statistics (`sensor.smart_me
 ## Notes
 
 - Data from Wiener Netze can be delayed by 2–7 days. Fetching 7 days covers the typical delay.
-- Cumulative sums reset at local midnight each day (timezone-aware, handles CET/CEST). The HA Energy Dashboard handles daily-resetting meters natively.
-- The KEYCLOAK_IDENTITY cookie expires periodically — you'll need to re-enter it when authentication fails.
+- Statistics are stored per UTC hour with one continuously increasing cumulative sum — it does not reset at midnight. Each fetch continues from the sum already stored before the first hour it imports, so re-fetching overlapping days updates those hours instead of double-counting them. The Energy Dashboard computes per-day consumption from the sum and groups it by your Home Assistant time zone, so days line up with local midnight without any reset.
+- The KEYCLOAK_IDENTITY cookie expires periodically. When a fetch fails to authenticate, Home Assistant shows a **Re-authenticate** prompt under Settings → Devices & services; enter a fresh cookie (or your new password) there — no need to delete and re-add the integration.

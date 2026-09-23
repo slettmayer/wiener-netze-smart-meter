@@ -1,5 +1,14 @@
 # Changelog
 
+## 2.7.0
+
+- Add: re-authentication. When the KEYCLOAK_IDENTITY cookie (or password) stops working, Home Assistant now shows a **Re-authenticate** prompt where you paste the new cookie or password; previously the entry stayed loaded, imports silently stopped, and the only way back was deleting and re-adding the integration
+- Add: `hacs.json` declares the minimum Home Assistant version, 2025.11.0 — the statistics code has required it all along (`StatisticMeanType` needs 2025.4, `unit_class` needs 2025.11), HACS just did not know
+- Fix: a missing, non-numeric, NaN or infinite meter reading no longer fails a fetch whose statistics were already imported; the meter reading sensor is left empty instead of showing 0 kWh
+- Fix: a non-numeric, NaN or infinite 15-minute value is skipped instead of failing the fetch or entering the statistics
+- Fix: README no longer claims cumulative sums reset at local midnight — they stopped resetting when the integration moved to monotonic sums; the README now describes how statistics are actually stored
+- Add: automated tests (pytest + `pytest-homeassistant-custom-component`) run in CI
+
 ## 2.6.8
 
 - Bump dependency (Dependabot)

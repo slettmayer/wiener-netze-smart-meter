@@ -53,13 +53,14 @@ None. The integration is installed as a raw directory drop-in under `custom_comp
 - Run locally: `ruff check . && ruff format . --check`
 
 ### CI/CD
-- **Validate** (`.github/workflows/validate.yml`): triggers on push to `main` and all PRs. Three parallel jobs + gate:
-  - `ruff` -- lint and format check (Python 3.12)
+- **Validate** (`.github/workflows/validate.yml`): triggers on push to `main` and all PRs. Four parallel jobs + gate:
+  - `ruff` -- lint and format check (Python from `.python-version`)
+  - `pytest` -- runs the test suite from `requirements_test.txt` (Python from `.python-version`)
   - `hassfest` -- validates `manifest.json`, translations, services against HA integration requirements
   - `hacs` -- validates HACS compatibility (no ignored checks)
-  - `gate` -- single required status check, passes only if all three above succeed
+  - `gate` -- single required status check, passes only if all four above succeed
 - **Release** (`.github/workflows/release.yml`): triggers via `workflow_run` after Validate succeeds on `main`. Extracts version from `manifest.json`, builds `wiener_netze_smart_meter.zip`, creates git tag + GitHub Release with notes from `CHANGELOG.md` and the archive attached
-- **Dependabot** (`.github/workflows/dependabot-version-bump.yml`): monitors GitHub Actions versions only (no Python packages tracked); auto-bumps patch version in `manifest.json` and prepends changelog entry on Dependabot PRs
+- **Dependabot** (`.github/workflows/dependabot-version-bump.yml`): monitors GitHub Actions versions and the Python pins in `requirements_lint.txt` and `requirements_test.txt` (one `python-lint-deps` group); auto-bumps patch version in `manifest.json` and prepends changelog entry on Dependabot PRs
 - **Release process**: documented in [CONTRIBUTING.md](../../CONTRIBUTING.md) -- bump version + changelog in PR, merge triggers auto-release
 
 #### The release archive -- `zip_release`
@@ -76,7 +77,10 @@ The motive is measurement as much as speed: GitHub reports a `download_count` pe
 Releases before 2.6.3 have no archive. Their tagged `hacs.json` has no `zip_release`, so HACS falls back to the file-by-file download for them -- downgrades keep working.
 
 ### Testing
-No test framework, test files, or test dependencies present.
+- `pytest` with `pytest-homeassistant-custom-component`, pinned in `requirements_test.txt` (the pin fixes the HA core version tests run against); Python version in `.python-version`
+- `tests/conftest.py` starts an in-memory recorder for every test, because the manifest depends on `recorder`
+- The API client is patched in tests; statistics go through the real recorder and are read back with `statistics_during_period`
+- CI runs the suite in the `pytest` job of `validate.yml`
 
 ### Infrastructure
 - MCP server (`ha-mcp`) in `.mcp.json` connects Claude tooling to a live HA instance for development
@@ -93,7 +97,7 @@ No test framework, test files, or test dependencies present.
 - No separate `requirements` declaration -- all dependencies are provided by HA runtime
 
 ## Known Risks
-- No automated tests to catch regressions (CI covers linting and validation only)
+- Tests patch the API client, so a change in the Wiener Netze or log.wien HTTP contract is not caught by CI
 - PKCE implementation is hand-rolled with static `state` and `nonce` values (non-compliant with CSRF/replay protections beyond the code challenge itself)
 
 ## Extension Guidelines

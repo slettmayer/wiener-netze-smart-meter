@@ -54,10 +54,10 @@ Smart home / energy management integration. Bridges the Wiener Netze utility por
 
 - **Authentication**: Owns both auth paths (cookie PKCE, password grant). Produces Bearer token. Depends on: Keycloak endpoints at log.wien.
 - **API Data Fetching**: Owns HTTP calls to Wiener Netze API endpoints. Parses JSON to Python dicts. Depends on: access token, aiohttp session.
-- **Data Aggregation & Statistics**: Owns transformation pipeline: raw 15-min records -> hourly sums -> daily-resetting cumulative sums -> HA external statistics. Depends on: api_client, HA recorder, HA timezone config.
+- **Data Aggregation & Statistics**: Owns transformation pipeline: raw 15-min records -> UTC hourly sums -> monotonically increasing cumulative sums -> HA external statistics. Depends on: api_client, HA recorder. Local-day grouping is left to the Energy Dashboard.
 - **Sensor Entities**: Read-only views over coordinator data. Two sensors per meter: diagnostic (last run timestamp as state + status attributes: success, error, start/end, and `last_run_success_time` for the last successful run) and meter reading (cumulative kWh).
 - **Service Action**: Owns `fetch_data` service with `SupportsResponse.OPTIONAL`. Iterates all coordinators, aggregates errors, returns structured JSON status (`success`, `start`, `end`, optional `error`). Raises `HomeAssistantError` on failure. Triggered by HA automations.
-- **Configuration Flow**: Two-step UI flow with live credential validation. Deduplicates by Zaehlpunktnummer.
+- **Configuration Flow**: Two-step UI flow with live credential validation. Deduplicates by Zaehlpunktnummer. A reauth flow re-asks only for the credentials of the entry's auth method when authentication fails.
 
 ### External Integrations
 
@@ -81,7 +81,7 @@ Smart home / energy management integration. Bridges the Wiener Netze utility por
 - KEYCLOAK_IDENTITY cookie as primary auth. Rationale: simpler than password flow; avoids issues with Keycloak client support for resource owner password grant.
 
 ## Known Risks
-- KEYCLOAK_IDENTITY cookie expires periodically, requiring manual re-entry
+- KEYCLOAK_IDENTITY cookie expires periodically; the coordinator raises `ConfigEntryAuthFailed`, which starts the reauth flow (`async_step_reauth_confirm`) so the user can paste a fresh cookie without re-adding the entry
 - Wiener Netze API format changes could break parsing without warning
 - No documented SLA or rate limits for the Wiener Netze API
 

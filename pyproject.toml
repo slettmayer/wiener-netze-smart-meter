@@ -16,3 +16,9 @@ select = [
 
 [tool.ruff.lint.isort]
 known-first-party = ["custom_components.wiener_netze_smart_meter"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+asyncio_mode = "auto"
+addopts = "-p no:cacheprovider"
