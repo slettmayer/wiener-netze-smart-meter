@@ -87,7 +87,7 @@ def test_timestamps_with_an_offset_land_in_the_same_utc_hour():
     assert hourly == {LOCAL_MIDNIGHT: 1.5}
 
 
-@pytest.mark.parametrize("wert", ["n/a", "", [], {}])
+@pytest.mark.parametrize("wert", ["n/a", "", [], {}, "nan", "inf", "-inf", float("nan")])
 def test_a_non_numeric_value_is_skipped_not_raised(wert):
     values = _quarter_hours(LOCAL_MIDNIGHT, 4)
     values[1]["wert"] = wert
@@ -106,7 +106,9 @@ def test_meter_reading_is_parsed(reading, expected):
     assert _parse_meter_reading(reading) == expected
 
 
-@pytest.mark.parametrize("reading", [{}, {"messwert": None}, {"messwert": "n/a"}])
+@pytest.mark.parametrize(
+    "reading", [{}, {"messwert": None}, {"messwert": "n/a"}, {"messwert": "nan"}, {"messwert": float("inf")}]
+)
 def test_an_unusable_meter_reading_is_none_not_zero(reading):
     """A missing counter value must not show up as a meter reading of 0 kWh."""
     assert _parse_meter_reading(reading) is None
@@ -150,7 +152,7 @@ async def test_a_later_fetch_continues_from_the_stored_sum(hass):
     assert [s["sum"] for s in stats] == [1.0, 2.0]
 
 
-@pytest.mark.parametrize("messwert", [None, "n/a"])
+@pytest.mark.parametrize("messwert", [None, "n/a", "nan"])
 async def test_an_unusable_meter_reading_does_not_fail_a_successful_import(hass, messwert):
     """Before the guard, float(None) raised after the statistics were already written."""
     entry = await _setup(hass, _fake_client(_quarter_hours(LOCAL_MIDNIGHT, 4), readings=[{"messwert": messwert}]))

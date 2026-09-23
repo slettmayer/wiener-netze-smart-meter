@@ -17,7 +17,7 @@
 
 Releases are fully automated. When a PR that changes the version in `manifest.json` is merged to `main`:
 
-1. The `Validate` workflow runs (ruff, hassfest, HACS validation)
+1. The `Validate` workflow runs (ruff, pytest, hassfest, HACS validation)
 2. On success, the `Auto Release` workflow creates a git tag and GitHub release
 3. Release notes are extracted from `CHANGELOG.md`
 4. HACS picks up the new release

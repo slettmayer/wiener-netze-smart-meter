@@ -53,13 +53,14 @@ None. The integration is installed as a raw directory drop-in under `custom_comp
 - Run locally: `ruff check . && ruff format . --check`
 
 ### CI/CD
-- **Validate** (`.github/workflows/validate.yml`): triggers on push to `main` and all PRs. Three parallel jobs + gate:
-  - `ruff` -- lint and format check (Python 3.12)
+- **Validate** (`.github/workflows/validate.yml`): triggers on push to `main` and all PRs. Four parallel jobs + gate:
+  - `ruff` -- lint and format check (Python from `.python-version`)
+  - `pytest` -- runs the test suite from `requirements_test.txt` (Python from `.python-version`)
   - `hassfest` -- validates `manifest.json`, translations, services against HA integration requirements
   - `hacs` -- validates HACS compatibility (no ignored checks)
-  - `gate` -- single required status check, passes only if all three above succeed
+  - `gate` -- single required status check, passes only if all four above succeed
 - **Release** (`.github/workflows/release.yml`): triggers via `workflow_run` after Validate succeeds on `main`. Extracts version from `manifest.json`, builds `wiener_netze_smart_meter.zip`, creates git tag + GitHub Release with notes from `CHANGELOG.md` and the archive attached
-- **Dependabot** (`.github/workflows/dependabot-version-bump.yml`): monitors GitHub Actions versions only (no Python packages tracked); auto-bumps patch version in `manifest.json` and prepends changelog entry on Dependabot PRs
+- **Dependabot** (`.github/workflows/dependabot-version-bump.yml`): monitors GitHub Actions versions and the Python pins in `requirements_lint.txt` and `requirements_test.txt` (one `python-lint-deps` group); auto-bumps patch version in `manifest.json` and prepends changelog entry on Dependabot PRs
 - **Release process**: documented in [CONTRIBUTING.md](../../CONTRIBUTING.md) -- bump version + changelog in PR, merge triggers auto-release
 
 #### The release archive -- `zip_release`

@@ -1,6 +1,7 @@
 """DataUpdateCoordinator for Wiener Netze Smart Meter."""
 
 import logging
+import math
 from collections import defaultdict
 from datetime import UTC, datetime, timedelta
 
@@ -275,9 +276,8 @@ def _aggregate_to_hourly(values: list[dict]) -> dict[datetime, float]:
             _LOGGER.debug("Could not parse timestamp: %s", zeitpunkt)
             continue
 
-        try:
-            kwh = float(wert)
-        except (TypeError, ValueError):
+        kwh = _to_finite_float(wert)
+        if kwh is None:
             _LOGGER.debug("Could not parse value %r at %s", wert, zeitpunkt)
             continue
 
@@ -290,11 +290,21 @@ def _aggregate_to_hourly(values: list[dict]) -> dict[datetime, float]:
 def _parse_meter_reading(reading: dict) -> float | None:
     """Return the reading's counter value in kWh, or None when it is missing or not numeric."""
     messwert = reading.get("messwert")
-    try:
-        value = float(messwert)
-    except (TypeError, ValueError):
+    value = _to_finite_float(messwert)
+    if value is None:
         _LOGGER.warning("Ignoring meter reading with unusable value: %r", messwert)
         return None
 
     _LOGGER.info("Latest meter reading: %s kWh", value)
     return value
+
+
+def _to_finite_float(value: object) -> float | None:
+    """Convert an API value to float, or None when it is missing, not numeric, NaN or infinite."""
+    try:
+        number = float(value)
+    except (TypeError, ValueError):
+        return None
+    # float() accepts "nan" and "inf"; neither is a usable energy value, and the
+    # recorder and the TOTAL_INCREASING sensor would both take them as real data.
+    return number if math.isfinite(number) else None
