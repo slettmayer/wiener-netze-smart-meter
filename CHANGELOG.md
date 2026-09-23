@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.7.1
+
+- Bump dependency (Dependabot)
+
 ## 2.7.0
 
 - Add: re-authentication. When the KEYCLOAK_IDENTITY cookie (or password) stops working, Home Assistant now shows a **Re-authenticate** prompt where you paste the new cookie or password; previously the entry stayed loaded, imports silently stopped, and the only way back was deleting and re-adding the integration
