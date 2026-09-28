@@ -60,7 +60,7 @@ None. The integration is installed as a raw directory drop-in under `custom_comp
   - `hacs` -- validates HACS compatibility (no ignored checks)
   - `gate` -- single required status check, passes only if all four above succeed
 - **Release** (`.github/workflows/release.yml`): triggers via `workflow_run` after Validate succeeds on `main`. Extracts version from `manifest.json`, builds `wiener_netze_smart_meter.zip`, creates git tag + GitHub Release with notes from `CHANGELOG.md` and the archive attached
-- **Dependabot** (`.github/workflows/dependabot-version-bump.yml`): monitors GitHub Actions versions and the Python pins in `requirements_lint.txt` and `requirements_test.txt` (one `python-lint-deps` group); auto-bumps patch version in `manifest.json` and prepends changelog entry on Dependabot PRs
+- **Dependabot** (`.github/dependabot.yml`): monitors GitHub Actions versions and the Python pins in `requirements_lint.txt` and `requirements_test.txt` (one `python-lint-deps` group). A Dependabot merge gets no version bump and produces no release: nothing it updates is in the release archive, and `manifest.json` declares `"requirements": []`. The update ships with the next real release
 - **Release process**: documented in [CONTRIBUTING.md](../../CONTRIBUTING.md) -- bump version + changelog in PR, merge triggers auto-release
 
 #### The release archive -- `zip_release`
