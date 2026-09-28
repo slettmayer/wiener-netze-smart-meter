@@ -28,6 +28,8 @@ No manual tagging or release creation needed.
 
 Dependabot PRs get **no version bump and no `CHANGELOG.md` entry**: nothing they update is part of the installed integration, so merging one produces no release, and the update ships with the next real one.
 
+They also **merge themselves**: `.github/workflows/dependabot-auto-merge.yml` enables auto-merge, and the PR lands once `gate` passes. One that fails `gate` stays open for a human; one left behind `main` by a feature merge needs `@dependabot rebase`. That workflow needs `GH_ACTION_APP_CLIENT_ID` and `GH_ACTION_APP_PRIVATE_KEY` in **both** the Actions *and* Dependabot secret stores (Dependabot-triggered runs read the Dependabot one), and the App needs **Contents** and **Pull requests** write.
+
 ### Versioning
 
 - **MAJOR** (3.0.0): Breaking changes (config flow changes, removed entities, stat ID changes)
