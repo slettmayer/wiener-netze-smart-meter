@@ -17,7 +17,7 @@ Home Assistant custom component that fetches energy consumption data from the Wi
 
 ### HACS (recommended)
 
-1. In HACS, search for **"Wiener Netze Smart Meter"** and download it. If it does not show up, add this repository as a [custom repository](https://hacs.xyz/docs/faq/custom_repositories/) (type: Integration) first.
+1. In HACS, search for **"Wiener Netze Smart Meter"** and download it. If it does not show up, add this repository as a [custom repository](https://hacs.xyz/docs/faq/custom_repositories/) (type: Integration), then search for it again and download it.
 2. Restart Home Assistant.
 
 ### Manual
