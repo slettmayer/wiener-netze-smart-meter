@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.7.2
+
+- Chore: the README install step leads with searching for the integration in HACS directly, keeping the custom-repository route as the fallback
+
 ## 2.7.1
 
 - Bump dependency (Dependabot)
