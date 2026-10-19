@@ -42,7 +42,7 @@ Austrian smart meter energy integration. Fetches 15-minute Bewegungsdaten (consu
 - **Release**: auto-creates tag + GitHub release after validate succeeds on main when version changes (`.github/workflows/release.yml`); the release carries a `wiener_netze_smart_meter.zip` asset built from the integration directory — its files must sit at the **archive root** and the asset name must match `filename` in `hacs.json` exactly, or HACS installs break silently (CI cannot catch either) -- see [TECH-STACK.md](docs/tech/TECH-STACK.md#the-release-archive----zip_release)
 - **Dependabot**: monitors GitHub Actions versions and the Python pins in `requirements_lint.txt` and `requirements_test.txt`; a Dependabot merge gets no version bump and produces no release, since nothing it updates ships; Dependabot PRs auto-merge once `gate` passes (`.github/workflows/dependabot-auto-merge.yml`)
 - **Dev workflow**: see [CONTRIBUTING.md](CONTRIBUTING.md) -- branch, lint, bump version + changelog in PR, merge triggers release
-- **HACS**: `hacs.json` present; installable via HACS, which downloads the release archive (`zip_release`)
+- **HACS**: `hacs.json` present; listed in the HACS default store since 2026-10-18 ([hacs/default#9257](https://github.com/hacs/default/pull/9257)); installable via HACS, which downloads the release archive (`zip_release`)
 
 ## Structural Risks
 - Tests patch the API client, so nothing exercises the real Wiener Netze / log.wien HTTP contract

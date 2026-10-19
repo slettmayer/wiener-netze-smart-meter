@@ -44,7 +44,7 @@ The integration acts as an HTTP client consuming two external REST APIs:
 All HTTP I/O is async via the HA-managed shared `ClientSession` from `async_get_clientsession`.
 
 ### Build Tools
-None. The integration is installed as a raw directory drop-in under `custom_components/`. Also installable via HACS (`hacs.json` present), which downloads a release archive -- see [The release archive](#the-release-archive----zip_release).
+None. The integration is installed as a raw directory drop-in under `custom_components/`. Also installable from the HACS default store (`hacs.json` present; listed since 2026-10-18, [hacs/default#9257](https://github.com/hacs/default/pull/9257)), which downloads a release archive -- see [The release archive](#the-release-archive----zip_release).
 
 ### Linting and Formatting
 - **Ruff** configured in `pyproject.toml`: `target-version = "py312"`, `line-length = 120`
