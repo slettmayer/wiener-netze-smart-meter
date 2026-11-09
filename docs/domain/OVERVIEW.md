@@ -52,7 +52,7 @@ Smart home / energy management integration. Bridges the Wiener Netze utility por
 
 ### Feature Boundaries
 
-- **Authentication**: Owns both auth paths (cookie PKCE, password grant). Produces Bearer token. Depends on: Keycloak endpoints at log.wien.
+- **Authentication**: Owns both auth paths (cookie PKCE, scripted login form + PKCE). Produces Bearer token. Depends on: Keycloak endpoints at log.wien.
 - **API Data Fetching**: Owns HTTP calls to Wiener Netze API endpoints. Parses JSON to Python dicts. Depends on: access token, aiohttp session.
 - **Data Aggregation & Statistics**: Owns transformation pipeline: raw 15-min records -> UTC hourly sums -> monotonically increasing cumulative sums -> HA external statistics. Depends on: api_client, HA recorder. Local-day grouping is left to the Energy Dashboard.
 - **Sensor Entities**: Read-only views over coordinator data. Two sensors per meter: diagnostic (last run timestamp as state + status attributes: success, error, start/end, and `last_run_success_time` for the last successful run) and meter reading (cumulative kWh).
@@ -78,7 +78,9 @@ Smart home / energy management integration. Bridges the Wiener Netze utility por
 ## Design Decisions
 - Monotonically increasing cumulative sums continued from the last persisted sum in the recorder. Rationale: daily-resetting sums caused negative spikes with `stat_type: change`; monotonic sums work correctly with HA Energy Dashboard's diff-based consumption calculation.
 - Three sequential API calls per fetch (one per role). Roles are independent data streams from the same endpoint.
-- KEYCLOAK_IDENTITY cookie as primary auth. Rationale: simpler than password flow; avoids issues with Keycloak client support for resource owner password grant.
+- KEYCLOAK_IDENTITY cookie as primary auth. Rationale: simpler than password flow.
+- Password auth scripts the Keycloak login form (authorization code + PKCE) instead of the resource owner password grant. Rationale: log.wien has Direct Access Grants disabled for the `wn-smartmeter` client, so the grant always fails with `unauthorized_client`. The login is identity-first (two-step): the username POST returns a password page with a fresh form action URL, and the theme is JS-rendered (Alpine.js), so the action URL is extracted from the page script, not a `<form>` tag.
+- Every config entry gets its own aiohttp session (and thus its own cookie jar), created in `async_setup_entry` and closed in `async_unload_entry`; the config and reauth flows validate on a throwaway session. Rationale: a session carries one cookie jar, and HA's shared client session would let one account's SSO session at log.wien leak into another account's login (and make credential validation accept anything while a session is active). The private jar also lets password-auth fetches reuse their own SSO session between runs instead of re-walking the login forms.
 
 ## Known Risks
 - KEYCLOAK_IDENTITY cookie expires periodically; the coordinator raises `ConfigEntryAuthFailed`, which starts the reauth flow (`async_step_reauth_confirm`) so the user can paste a fresh cookie without re-adding the entry

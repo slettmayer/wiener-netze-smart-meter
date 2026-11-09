@@ -57,6 +57,11 @@ class SmartMeterCoordinator(DataUpdateCoordinator[dict]):
             update_interval=None,  # No automatic polling — triggered via service action
         )
 
+    @property
+    def client(self) -> WienerNetzeApiClient:
+        """The API client owned by this entry."""
+        return self._client
+
     async def async_fetch(self, days: int) -> dict:
         """Fetch data for the given number of days and return status."""
         self._fetch_days = days

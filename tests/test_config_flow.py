@@ -1,6 +1,6 @@
 """The user and reauth flows."""
 
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from homeassistant.config_entries import SOURCE_USER
@@ -20,6 +20,8 @@ from custom_components.wiener_netze_smart_meter.const import (
 )
 
 from .conftest import COOKIE_DATA, PASSWORD_DATA, ZAEHLPUNKTNUMMER, make_entry
+
+CREATE_SESSION = "custom_components.wiener_netze_smart_meter.config_flow.async_create_clientsession"
 
 METER_INPUT = {
     CONF_GESCHAEFTSPARTNER: "1234567890",
@@ -95,6 +97,32 @@ async def test_user_flow_shows_validation_errors(hass, side_effect, error):
 
     assert result["type"] is FlowResultType.FORM
     assert result["errors"] == {"base": error}
+
+
+async def test_validation_runs_on_a_throwaway_session(hass):
+    """Validation must use a fresh session, so no SSO session can make any credentials pass."""
+    sessions = []
+
+    def _create_session(_hass):
+        session = MagicMock()
+        session.close = AsyncMock()
+        sessions.append(session)
+        return session
+
+    result = await _start_user_flow(hass, AUTH_METHOD_PASSWORD)
+
+    with (
+        patch(CREATE_SESSION, side_effect=_create_session),
+        _patch_authenticate(),
+        _patch_setup(),
+    ):
+        result = await hass.config_entries.flow.async_configure(
+            result["flow_id"], {CONF_USERNAME: "user@example.invalid", CONF_PASSWORD: "pw", **METER_INPUT}
+        )
+
+    assert result["type"] is FlowResultType.CREATE_ENTRY
+    assert len(sessions) == 1
+    sessions[0].close.assert_awaited_once()
 
 
 async def test_same_meter_cannot_be_added_twice(hass):

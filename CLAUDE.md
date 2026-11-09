@@ -11,7 +11,7 @@ Standard Home Assistant custom component with flat module layout under `custom_c
 
 - `__init__.py` -- entry point, service registration (with `SupportsResponse.OPTIONAL`), lifecycle
 - `coordinator.py` -- DataUpdateCoordinator: fetch orchestration, aggregation, statistics insertion, error propagation via `HomeAssistantError`
-- `api_client.py` -- HTTP client: auth (cookie PKCE + password grant) and API calls
+- `api_client.py` -- HTTP client: auth (cookie PKCE + scripted login-form password auth) and API calls
 - `sensor.py` -- read-only CoordinatorEntity sensors (diagnostic + meter reading)
 - `config_flow.py` -- two-step UI config flow with live credential validation, plus a reauth flow for expired credentials
 - `const.py` -- all constants, URLs, role codes, config keys (single source of truth)

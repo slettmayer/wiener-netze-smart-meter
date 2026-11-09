@@ -6,7 +6,7 @@ from typing import Any
 
 import voluptuous as vol
 from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from homeassistant.helpers.aiohttp_client import async_create_clientsession
 
 from .api_client import AuthenticationError, WienerNetzeApiClient
 from .const import (
@@ -114,8 +114,10 @@ class WienerNetzeSmartMeterConfigFlow(ConfigFlow, domain=DOMAIN):
 
     async def _async_validate(self, data: Mapping[str, Any]) -> str | None:
         """Authenticate with the given config data; return a form error key or None."""
+        # A throwaway session: validation must not read (or leave) an SSO
+        # session in any other entry's cookie jar.
         client = WienerNetzeApiClient(
-            async_get_clientsession(self.hass),
+            async_create_clientsession(self.hass),
             auth_method=data[CONF_AUTH_METHOD],
             keycloak_identity=data.get(CONF_KEYCLOAK_IDENTITY),
             username=data.get(CONF_USERNAME),
@@ -128,6 +130,8 @@ class WienerNetzeSmartMeterConfigFlow(ConfigFlow, domain=DOMAIN):
         except Exception:
             _LOGGER.exception("Unexpected error during config validation")
             return "cannot_connect"
+        finally:
+            await client.close()
         return None
 
 

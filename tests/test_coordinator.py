@@ -11,7 +11,7 @@ from homeassistant.exceptions import HomeAssistantError
 from pytest_homeassistant_custom_component.components.recorder.common import async_wait_recording_done
 
 from custom_components.wiener_netze_smart_meter.api_client import ApiError, AuthenticationError
-from custom_components.wiener_netze_smart_meter.const import DOMAIN, ROLES, SERVICE_FETCH_DATA
+from custom_components.wiener_netze_smart_meter.const import CONF_ZAEHLPUNKTNUMMER, DOMAIN, ROLES, SERVICE_FETCH_DATA
 from custom_components.wiener_netze_smart_meter.coordinator import _aggregate_to_hourly, _parse_meter_reading
 
 from .conftest import COOKIE_DATA, make_entry
@@ -200,3 +200,32 @@ async def test_expired_credentials_start_a_reauth_flow(hass):
 
     flows = hass.config_entries.flow.async_progress_by_handler(DOMAIN)
     assert [(f["context"]["source"], f["context"]["entry_id"]) for f in flows] == [(SOURCE_REAUTH, entry.entry_id)]
+
+
+async def test_each_entry_gets_its_own_session(hass):
+    """Entries must not share a cookie jar: one account's SSO session must not ride another's."""
+    with patch("custom_components.wiener_netze_smart_meter.WienerNetzeApiClient", return_value=_fake_client([])) as cls:
+        for zp in ("AT0010000000000000001000012345678", "AT0020000000000000001000012345678"):
+            entry = make_entry({**COOKIE_DATA, CONF_ZAEHLPUNKTNUMMER: zp})
+            entry.add_to_hass(hass)
+            assert await hass.config_entries.async_setup(entry.entry_id)
+            await hass.async_block_till_done()
+
+    sessions = [call.args[0] for call in cls.call_args_list]
+    assert len(sessions) == 2
+    assert sessions[0] is not sessions[1]
+
+
+async def test_unload_closes_the_entrys_session(hass):
+    """The private session must not outlive its config entry."""
+    with patch("custom_components.wiener_netze_smart_meter.WienerNetzeApiClient", return_value=_fake_client([])) as cls:
+        entry = make_entry(COOKIE_DATA)
+        entry.add_to_hass(hass)
+        assert await hass.config_entries.async_setup(entry.entry_id)
+        await hass.async_block_till_done()
+        session = cls.call_args.args[0]
+
+        assert await hass.config_entries.async_unload(entry.entry_id)
+        await hass.async_block_till_done()
+
+    assert session.closed

@@ -6,7 +6,7 @@ import voluptuous as vol
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, ServiceCall, ServiceResponse, SupportsResponse
 from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from homeassistant.helpers.aiohttp_client import async_create_clientsession
 
 from .api_client import WienerNetzeApiClient
 from .const import (
@@ -34,7 +34,9 @@ SERVICE_SCHEMA = vol.Schema(
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up Wiener Netze Smart Meter from a config entry."""
-    session = async_get_clientsession(hass)
+    # A private session (and cookie jar) per entry: accounts sharing HA's
+    # client session would ride each other's SSO sessions at log.wien.
+    session = async_create_clientsession(hass)
     client = WienerNetzeApiClient(
         session,
         auth_method=entry.data[CONF_AUTH_METHOD],
@@ -90,7 +92,8 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
     unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
     if unload_ok:
-        hass.data[DOMAIN].pop(entry.entry_id)
+        coordinator = hass.data[DOMAIN].pop(entry.entry_id)
+        await coordinator.client.close()  # the entry's private session and cookie jar
 
     # Remove service if no more entries
     if not hass.data.get(DOMAIN):

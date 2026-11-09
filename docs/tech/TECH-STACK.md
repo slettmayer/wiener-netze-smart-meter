@@ -38,8 +38,9 @@ The integration acts as an HTTP client consuming two external REST APIs:
 
 2. **log.wien Keycloak OIDC** (`log.wien/auth/realms/logwien/protocol/openid-connect/`)
    - Cookie-based PKCE authorization code flow (primary)
-   - Resource owner password grant (secondary)
+   - Password auth (secondary): scripted Keycloak login form + PKCE authorization code flow -- the direct password grant is disabled server-side (`unauthorized_client`)
    - PKCE implemented inline using `base64`, `hashlib`, `os.urandom`
+   - One private aiohttp session per config entry (`async_create_clientsession`, closed on unload): a session's cookie jar must not be shared between accounts
 
 All HTTP I/O is async via the HA-managed shared `ClientSession` from `async_get_clientsession`.
 
