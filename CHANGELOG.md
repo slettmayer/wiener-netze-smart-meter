@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.7.3
+
+- Fix: username/password login works again. log.wien no longer allows the direct password grant for the Smart Meter client, so every password login failed with `unauthorized_client`; the integration now signs in through the log.wien login form instead
+- Fix: each config entry uses its own HTTP session, so two accounts never share a log.wien login, and a wrong password can no longer pass setup or re-authentication while another login is still active
+- Thanks to @Lukas0907 for tracking down the login change and contributing the fix ([#43](https://github.com/slettmayer/wiener-netze-smart-meter/pull/43))!
+
 ## 2.7.2
 
 - Chore: the README install step leads with searching for the integration in HACS directly, keeping the custom-repository route as the fallback

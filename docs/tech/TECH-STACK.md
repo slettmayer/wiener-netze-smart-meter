@@ -42,7 +42,7 @@ The integration acts as an HTTP client consuming two external REST APIs:
    - PKCE implemented inline using `base64`, `hashlib`, `os.urandom`
    - One private aiohttp session per config entry (`async_create_clientsession`, closed on unload): a session's cookie jar must not be shared between accounts
 
-All HTTP I/O is async via the HA-managed shared `ClientSession` from `async_get_clientsession`.
+All HTTP I/O is async via aiohttp sessions from `async_create_clientsession`: one per config entry, plus a throwaway one for each config or reauth flow validation.
 
 ### Build Tools
 None. The integration is installed as a raw directory drop-in under `custom_components/`. Also installable from the HACS default store (`hacs.json` present; listed since 2026-10-18, [hacs/default#9257](https://github.com/hacs/default/pull/9257)), which downloads a release archive -- see [The release archive](#the-release-archive----zip_release).
@@ -103,5 +103,5 @@ Releases before 2.6.3 have no archive. Their tagged `hacs.json` has no `zip_rele
 
 ## Extension Guidelines
 - New dependencies should be HA-provided where possible; if external, add to `manifest.json` `"requirements"` list
-- New API endpoints follow the existing pattern in `api_client.py` using `async_get_clientsession`
+- New API endpoints follow the existing pattern in `api_client.py` using the client's own session (`self._session`)
 - Auth flow changes must update both cookie and password paths
