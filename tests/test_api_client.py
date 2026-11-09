@@ -125,7 +125,6 @@ async def test_password_auth_refuses_to_post_credentials_to_another_host(hass, a
 
 
 async def test_password_auth_ignores_a_redirect_that_impersonates_the_app(hass, aioclient_mock):
-    # startswith(REDIRECT_URI) used to accept this lookalike host.
     evil_redirect = "https://smartmeter-web.wienernetze.at.evil.com/login?code=STOLEN"
     aioclient_mock.get(AUTHORIZATION_ENDPOINT, status=302, headers={"Location": evil_redirect})
     aioclient_mock.get(
@@ -293,7 +292,7 @@ def test_asks_password(page, expected):
     [
         (f"{REDIRECT_URI}/#state=x&code=ABC", True),
         (f"{REDIRECT_URI}?code=ABC", True),
-        # A lookalike host must not pass an origin check (startswith did).
+        # A lookalike host must not pass an origin check.
         ("https://smartmeter-web.wienernetze.at.evil.com/#code=ABC", False),
         ("https://log.wien/auth/realms/logwien", False),
         ("/relative/redirect", False),
