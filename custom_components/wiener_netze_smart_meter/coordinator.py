@@ -23,9 +23,12 @@ from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 from .api_client import ApiError, AuthenticationError, WienerNetzeApiClient
 from .const import (
     CONF_GESCHAEFTSPARTNER,
+    CONF_METER_TYPE,
     CONF_ZAEHLPUNKTNUMMER,
     DEFAULT_FETCH_DAYS,
     DOMAIN,
+    FEED_IN_ROLES,
+    METER_TYPE_FEED_IN,
     ROLE_NAMES,
     ROLES,
 )
@@ -45,6 +48,8 @@ class SmartMeterCoordinator(DataUpdateCoordinator[dict]):
         self._client = client
         self._geschaeftspartner = entry.data[CONF_GESCHAEFTSPARTNER]
         self._zaehlpunktnummer = entry.data[CONF_ZAEHLPUNKTNUMMER]
+        # Entries created before meter types existed are consumption meters.
+        self._roles = FEED_IN_ROLES if entry.data.get(CONF_METER_TYPE) == METER_TYPE_FEED_IN else ROLES
         self._fetch_days = DEFAULT_FETCH_DAYS
         self.last_run: dict | None = None
         self.last_successful_run: str | None = None
@@ -128,7 +133,7 @@ class SmartMeterCoordinator(DataUpdateCoordinator[dict]):
         }
 
         # Fetch and insert statistics for each role
-        for rolle in ROLES:
+        for rolle in self._roles:
             try:
                 values = await self._client.fetch_bewegungsdaten(
                     access_token,
@@ -195,7 +200,7 @@ class SmartMeterCoordinator(DataUpdateCoordinator[dict]):
             has_sum=True,
             mean_type=StatisticMeanType.NONE,
             unit_class="energy",
-            name=f"Smart Meter {role_name.title()}",
+            name=f"Smart Meter {role_name.replace('_', ' ').title()}",
             source=DOMAIN,
             statistic_id=statistic_id,
             unit_of_measurement="kWh",

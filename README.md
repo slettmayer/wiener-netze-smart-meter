@@ -6,6 +6,7 @@ Home Assistant custom component that fetches energy consumption data from the Wi
 
 - Fetches 15-minute interval data from Wiener Netze, aggregates to hourly values
 - Three energy roles: **Total** (V002), **Grid/Restnetzbezug** (G001), **PV/Eigendeckung** (G003)
+- Feed-in meters (Einspeisezählpunkt): energy fed into the grid (E002)
 - Inserts **external statistics** for the HA Energy Dashboard — no conflicts with HA's auto-recorded statistics
 - Hourly statistics keyed on the UTC timestamps the API delivers — the Energy Dashboard groups them by your local day (CET/CEST) when it displays them
 - Meter reading sensor showing the current counter value (kWh)
@@ -39,6 +40,7 @@ The integration is in the [HACS](https://hacs.xyz/) default store.
 4. **Step 2:** Enter your credentials and meter details:
    - **Geschaeftspartner** — your user ID (e.g., `1202381355`)
    - **Zaehlpunktnummer** — your meter number (e.g., `AT0010000000000000001000015444485`)
+   - **Meter type** — **Consumption** for your normal meter, **Feed-in** for a separate feed-in meter (Einspeisezählpunkt), e.g. of a PV system. Add each meter as its own entry.
 
 ## Usage
 
@@ -90,6 +92,9 @@ The integration inserts external statistics visible in **Developer Tools → Sta
 | `wiener_netze_smart_meter:total_*` | V002 | Total consumption |
 | `wiener_netze_smart_meter:grid_*` | G001 | Grid consumption (Restnetzbezug) |
 | `wiener_netze_smart_meter:pv_*` | G003 | PV self-consumption (Eigendeckung) |
+| `wiener_netze_smart_meter:feed_in_*` | E002 | Energy fed into the grid (feed-in meters only) |
+
+A consumption meter gets the `total`, `grid` and `pv` statistics; a feed-in meter gets only `feed_in`. Use `feed_in` in the Energy Dashboard as **Return to grid**.
 
 To use in the Energy Dashboard: **Settings → Dashboards → Energy → Add consumption/production** and search for `wiener_netze_smart_meter`.
 

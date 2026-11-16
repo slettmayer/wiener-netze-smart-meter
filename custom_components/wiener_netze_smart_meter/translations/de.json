@@ -16,7 +16,8 @@
           "username": "Benutzername (E-Mail)",
           "password": "Passwort",
           "geschaeftspartner": "Geschaeftspartner (Benutzer-ID)",
-          "zaehlpunktnummer": "Zaehlpunktnummer (Geraete-Nr.)"
+          "zaehlpunktnummer": "Zaehlpunktnummer (Geraete-Nr.)",
+          "meter_type": "Zaehlpunkt-Art"
         }
       },
       "reauth_confirm": {
