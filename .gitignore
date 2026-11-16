@@ -114,4 +114,7 @@ venv/
 ### MCP ###
 .mcp.json
 
+### Release archive (scripts/build_release_zip.sh) ###
+/wiener_netze_smart_meter.zip
+
 # End of https://www.toptal.com/developers/gitignore/api/visualstudiocode,macos,homeassistant

@@ -4,6 +4,7 @@ on:
   push:
     branches: [main]
   pull_request:
+  workflow_call:
 
 jobs:
   ruff:
@@ -45,9 +46,16 @@ jobs:
         with:
           category: integration
 
+  archive:
+    name: Release archive
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - run: scripts/build_release_zip.sh
+
   gate:
     name: gate
-    needs: [ruff, pytest, hassfest, hacs]
+    needs: [ruff, pytest, hassfest, hacs, archive]
     if: always()
     runs-on: ubuntu-latest
     steps:
@@ -56,7 +64,8 @@ jobs:
           if [[ "${{ needs.ruff.result }}" == "success" && \
                 "${{ needs.pytest.result }}" == "success" && \
                 "${{ needs.hassfest.result }}" == "success" && \
-                "${{ needs.hacs.result }}" == "success" ]]; then
+                "${{ needs.hacs.result }}" == "success" && \
+                "${{ needs.archive.result }}" == "success" ]]; then
             echo "All checks passed"
             exit 0
           else

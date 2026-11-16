@@ -54,24 +54,26 @@ None. The integration is installed as a raw directory drop-in under `custom_comp
 - Run locally: `ruff check . && ruff format . --check`
 
 ### CI/CD
-- **Validate** (`.github/workflows/validate.yml`): triggers on push to `main` and all PRs. Four parallel jobs + gate:
+- **Validate** (`.github/workflows/validate.yml`): triggers on push to `main` and all PRs, and is called by Pre-release. Five parallel jobs + gate:
   - `ruff` -- lint and format check (Python from `.python-version`)
   - `pytest` -- runs the test suite from `requirements_test.txt` (Python from `.python-version`)
   - `hassfest` -- validates `manifest.json`, translations, services against HA integration requirements
   - `hacs` -- validates HACS compatibility (no ignored checks)
-  - `gate` -- single required status check, passes only if all four above succeed
-- **Release** (`.github/workflows/release.yml`): triggers via `workflow_run` after Validate succeeds on `main`. Extracts version from `manifest.json`, builds `wiener_netze_smart_meter.zip`, creates git tag + GitHub Release with notes from `CHANGELOG.md` and the archive attached
+  - `archive` -- builds the release archive with `scripts/build_release_zip.sh`, which fails on a wrong layout
+  - `gate` -- single required status check, passes only if all five above succeed
+- **Release** (`.github/workflows/release.yml`): triggers via `workflow_run` after Validate succeeds on `main`. Extracts version from `manifest.json`, builds the archive with `scripts/build_release_zip.sh`, creates git tag + GitHub Release with notes from `CHANGELOG.md` and the archive attached, then deletes that version's test builds (`v<version>b<n>` pre-releases and their tags). The cleanup also runs when the release already exists, so re-running the workflow finishes an interrupted cleanup
+- **Pre-release** (`.github/workflows/prerelease.yml`): started by hand on a feature branch (`gh workflow run prerelease.yml --ref <branch>`). Refuses `main` and refuses a `manifest.json` version that is already released, runs Validate, then publishes a GitHub pre-release `v<version>b<run number>` with the same archive, its `manifest.json` set to that version. Users install it through the HACS pre-release switch. Manual on purpose: anyone with that switch on gets every test build
 - **Dependabot** (`.github/dependabot.yml`): monitors GitHub Actions versions and the Python pins in `requirements_lint.txt` and `requirements_test.txt` (one `python-lint-deps` group). A Dependabot merge gets no version bump and produces no release: nothing it updates is in the release archive, and `manifest.json` declares `"requirements": []`. The update ships with the next real release. `.github/workflows/dependabot-auto-merge.yml` enables squash auto-merge on Dependabot PRs, so they land once `gate` passes; it uses the GitHub App token (`GH_ACTION_APP_CLIENT_ID` / `GH_ACTION_APP_PRIVATE_KEY`, in both the Actions and Dependabot secret stores) because a `GITHUB_TOKEN` merge triggers no workflows. The two ecosystems run on different days, since the ruleset requires an up-to-date branch and auto-merge never updates one
 - **Release process**: documented in [CONTRIBUTING.md](../../CONTRIBUTING.md) -- bump version + changelog in PR, merge triggers auto-release
 
 #### The release archive -- `zip_release`
 
-`hacs.json` sets `zip_release: true` and `filename: "wiener_netze_smart_meter.zip"`, so HACS downloads that one asset from the release instead of fetching every file through the GitHub API. Two things constrain how the workflow builds it:
+`hacs.json` sets `zip_release: true` and `filename: "wiener_netze_smart_meter.zip"`, so HACS downloads that one asset from the release instead of fetching every file through the GitHub API. Two things constrain how the archive is built:
 
-- **The integration's files must sit at the archive root.** HACS does `zip_file.extractall(<config>/custom_components/wiener_netze_smart_meter)`, so a top-level `wiener_netze_smart_meter/` directory inside the zip would land as `custom_components/wiener_netze_smart_meter/wiener_netze_smart_meter/`. That is why the workflow `cd`s into the integration directory and zips `.`.
+- **The integration's files must sit at the archive root.** HACS does `zip_file.extractall(<config>/custom_components/wiener_netze_smart_meter)`, so a top-level `wiener_netze_smart_meter/` directory inside the zip would land as `custom_components/wiener_netze_smart_meter/wiener_netze_smart_meter/`. That is why the script zips from inside the integration directory.
 - **The asset name must equal `filename` exactly.** HACS requests that one name from the release and fails the download if it is absent. Renaming one without the other breaks every install.
 
-The HACS action only checks that `filename` is set when `zip_release` is true -- it does **not** verify the asset exists on the latest release, so a broken archive step fails silently at install time, never in CI. The archive is therefore attached in the same `gh release create` call, so a release can never be published without it.
+The HACS action only checks that `filename` is set when `zip_release` is true -- it does **not** verify the asset exists on the latest release. `scripts/build_release_zip.sh` is therefore the one place that builds the archive, for Validate, Release and Pre-release alike: it takes the name from `hacs.json` and fails when `manifest.json` or `__init__.py` is not at the archive root or the archived version is not the expected one. Validate runs it on every PR, so a broken layout fails CI instead of installs. The archive is attached in the same `gh release create` call, so a release can never be published without it. Run the script locally to inspect the archive; it writes the zip to the repository root (git-ignored).
 
 The motive is measurement as much as speed: GitHub reports a `download_count` per release asset, and that is the only install signal this project has.
 
