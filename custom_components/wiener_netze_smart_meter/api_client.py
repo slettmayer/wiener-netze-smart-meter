@@ -286,7 +286,8 @@ class WienerNetzeApiClient:
             await self._release(resp)
             raise ApiError(f"Invalid bewegungsdaten response for {rolle}: {err}") from err
         values = data.get("values", [])
-        einheit = (data.get("descriptor") or {}).get("einheit")
+        descriptor = data.get("descriptor")
+        einheit = descriptor.get("einheit") if isinstance(descriptor, dict) else None
         _LOGGER.debug("Fetched %d values for rolle=%s einheit=%s", len(values), rolle, einheit)
         if isinstance(einheit, str) and einheit.upper() == "WH":
             values = [_wh_to_kwh(value) for value in values]

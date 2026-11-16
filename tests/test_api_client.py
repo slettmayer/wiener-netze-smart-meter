@@ -197,6 +197,15 @@ async def test_fetch_bewegungsdaten_returns_kwh(hass, aioclient_mock, einheit, w
     assert [v["wert"] for v in values] == [expected]
 
 
+@pytest.mark.parametrize("descriptor", ["WH", ["WH"], None])
+async def test_fetch_bewegungsdaten_treats_a_malformed_descriptor_as_an_unknown_unit(hass, aioclient_mock, descriptor):
+    aioclient_mock.get(BEWEGUNGSDATEN_ENDPOINT, json={"descriptor": descriptor, "values": [{"wert": 0.25}]})
+
+    values = await _cookie_client(hass).fetch_bewegungsdaten("token", "1", "2", "E002", "von", "bis")
+
+    assert [v["wert"] for v in values] == [0.25]
+
+
 async def test_fetch_bewegungsdaten_passes_a_non_numeric_wh_value_through(hass, aioclient_mock):
     aioclient_mock.get(BEWEGUNGSDATEN_ENDPOINT, json=_bewegungsdaten("WH", "n/a", None))
 
