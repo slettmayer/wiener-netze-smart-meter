@@ -74,9 +74,9 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       # HACS offers only the five latest releases for download, so leftover
-      # test builds would push stable versions out of that list.
+      # test builds would push stable versions out of that list. Runs even when
+      # the release already exists, so a re-run finishes an interrupted cleanup.
       - name: Delete this version's test builds
-        if: steps.check.outputs.exists == 'false'
         run: |
           gh release list --limit 100 --json tagName,isPrerelease \
             --jq '.[] | select(.isPrerelease) | .tagName' |
