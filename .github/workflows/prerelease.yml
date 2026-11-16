@@ -1,0 +1,82 @@
+name: Pre-release
+
+# Publishes a test build of a feature branch as a GitHub pre-release, so a user
+# can install it through HACS before the change is merged. Started by hand:
+#   gh workflow run prerelease.yml --ref <branch>
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    name: Check branch and version
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - name: Refuse main and tags
+        if: github.ref_type != 'branch' || github.ref_name == github.event.repository.default_branch
+        run: |
+          echo "::error::Run this from a feature branch. Stable releases come from main."
+          exit 1
+
+      - uses: actions/checkout@v7
+
+      # The stable release later deletes test builds named v<version>b<n>, and
+      # HACS ranks 2.8.0b3 below 2.8.0 -- so the base version must be unreleased.
+      - name: Pick the pre-release version
+        id: version
+        run: |
+          base=$(jq -r '.version' custom_components/wiener_netze_smart_meter/manifest.json)
+          if gh release view "v${base}" > /dev/null 2>&1; then
+            echo "::error::v${base} is already released. Bump the version in manifest.json on this branch first."
+            exit 1
+          fi
+          echo "version=${base}b${GITHUB_RUN_NUMBER}" >> "$GITHUB_OUTPUT"
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+  validate:
+    needs: check
+    uses: ./.github/workflows/validate.yml
+
+  prerelease:
+    name: Publish pre-release
+    needs: [check, validate]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Build the HACS archive
+        id: archive
+        run: scripts/build_release_zip.sh "${VERSION}"
+        env:
+          VERSION: ${{ needs.check.outputs.version }}
+
+      - name: Create pre-release
+        run: |
+          pr=$(gh pr list --head "${GITHUB_REF_NAME}" --state open --json url --jq '.[0].url // empty')
+          {
+            echo "Test build of \`${GITHUB_REF_NAME}\` at ${GITHUB_SHA}. Not a stable release."
+            if [[ -n "${pr}" ]]; then
+              echo
+              echo "Pull request: ${pr}"
+            fi
+            echo
+            echo "To install it, turn on the pre-release switch of this integration in HACS, or pick this version when you redownload the integration."
+          } > "${RUNNER_TEMP}/notes.md"
+          gh release create "v${VERSION}" \
+            --prerelease \
+            --title "v${VERSION}" \
+            --target "${GITHUB_SHA}" \
+            --notes-file "${RUNNER_TEMP}/notes.md" \
+            "${ARCHIVE}"
+        env:
+          VERSION: ${{ needs.check.outputs.version }}
+          ARCHIVE: ${{ steps.archive.outputs.path }}
+          GH_TOKEN: ${{ github.token }}

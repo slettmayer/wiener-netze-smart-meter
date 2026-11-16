@@ -24,6 +24,17 @@ Releases are fully automated. When a PR that changes the version in `manifest.js
 
 No manual tagging or release creation needed.
 
+### Test builds (pre-releases)
+
+To let a user test a change before it is merged, publish a test build from the feature branch:
+
+1. Bump `version` in `manifest.json` on the branch (the workflow refuses a version that is already released)
+2. Run `gh workflow run prerelease.yml --ref <branch>`
+3. The workflow runs the validation and publishes a GitHub pre-release `v<version>b<n>`, e.g. `v2.8.0b3`
+4. The user turns on the pre-release switch of this integration in HACS, or picks that version when redownloading
+
+Each run publishes a new build, and everyone with the pre-release switch on gets it, so publish only builds you want tested. When the stable `v<version>` is released, its test builds are deleted automatically.
+
 ### Dependabot PRs
 
 Dependabot PRs get **no version bump and no `CHANGELOG.md` entry**: nothing they update is part of the installed integration, so merging one produces no release, and the update ships with the next real one.

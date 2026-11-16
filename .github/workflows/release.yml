@@ -57,23 +57,8 @@ jobs:
 
       - name: Build the HACS archive
         if: steps.check.outputs.exists == 'false'
-        run: |
-          # HACS extracts this archive straight into
-          # `custom_components/wiener_netze_smart_meter/`
-          # (`zip_file.extractall(self.content.path.local)`), so the integration's
-          # files must sit at the archive ROOT -- a top-level
-          # `wiener_netze_smart_meter/` directory inside the zip would land as
-          # `custom_components/wiener_netze_smart_meter/wiener_netze_smart_meter/`.
-          # Hence the `cd` and the `.` rather than zipping the path from here.
-          #
-          # The name must match `filename` in hacs.json exactly: HACS asks the
-          # release for that one asset by name and fails the download if it is
-          # absent. The HACS validation action only checks that `filename` is
-          # set -- it never looks at the release -- so a broken archive here
-          # fails silently at install time, never in CI.
-          cd custom_components/wiener_netze_smart_meter
-          zip -r -q "${GITHUB_WORKSPACE}/wiener_netze_smart_meter.zip" . -x '*__pycache__*' '*.pyc'
-          unzip -l "${GITHUB_WORKSPACE}/wiener_netze_smart_meter.zip"
+        id: archive
+        run: scripts/build_release_zip.sh
 
       - name: Create release
         if: steps.check.outputs.exists == 'false'
@@ -82,7 +67,24 @@ jobs:
             --title "${TAG}" \
             --target "${{ github.event.workflow_run.head_sha }}" \
             --notes-file /tmp/release-notes.md \
-            wiener_netze_smart_meter.zip
+            "${ARCHIVE}"
+        env:
+          TAG: ${{ steps.version.outputs.tag }}
+          ARCHIVE: ${{ steps.archive.outputs.path }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # HACS offers only the five latest releases for download, so leftover
+      # test builds would push stable versions out of that list.
+      - name: Delete this version's test builds
+        if: steps.check.outputs.exists == 'false'
+        run: |
+          gh release list --limit 100 --json tagName,isPrerelease \
+            --jq '.[] | select(.isPrerelease) | .tagName' |
+          while read -r tag; do
+            if [[ "${tag}" =~ ^"${TAG}"b[0-9]+$ ]]; then
+              gh release delete "${tag}" --cleanup-tag --yes
+            fi
+          done
         env:
           TAG: ${{ steps.version.outputs.tag }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
