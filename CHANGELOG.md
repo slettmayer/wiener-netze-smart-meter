@@ -4,7 +4,7 @@
 
 - Add: feed-in meters (Einspeisezählpunkt). Choose **Feed-in** as the meter type when adding the meter; the integration then imports the energy fed into the grid as the statistic `wiener_netze_smart_meter:feed_in_*`, which the Energy Dashboard can use as *Return to grid* ([#47](https://github.com/slettmayer/wiener-netze-smart-meter/issues/47))
 - A feed-in meter added with an earlier version was set up as a consumption meter: delete it and add it again with the meter type **Feed-in**. Existing consumption meters need no change
-- Fix: 15-minute values that Wiener Netze reports in Wh are converted to kWh instead of being imported 1000 times too high
+- Add: should Wiener Netze report 15-minute values in Wh, they are converted to kWh. So far all data has come in kWh, so existing statistics are not affected
 
 ## 2.7.3
 
