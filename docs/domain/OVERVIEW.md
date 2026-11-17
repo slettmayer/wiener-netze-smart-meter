@@ -29,6 +29,9 @@ Smart home / energy management integration. Bridges the Wiener Netze utility por
 - `V002` -- Gesamtverbrauch (total consumption)
 - `G001` -- Restnetzbezug (grid draw)
 - `G003` -- Eigendeckung (PV self-coverage)
+- `E002` -- Einspeisung (feed-in to the grid), only for feed-in meters
+
+**Meter type** -- Chosen per config entry (`meter_type`). A `consumption` meter fetches `V002`, `G001` and `G003`; a `feed_in` meter (Einspeisezählpunkt, e.g. of a PV system) fetches only `E002`. Entries created before 2.8.0 have no `meter_type` and are consumption meters.
 
 **Zaehlwerk/Messwert (Meter Reading)** -- Cumulative counter value on the physical meter. Monotonically increasing float in kWh.
 
@@ -46,6 +49,8 @@ Smart home / energy management integration. Bridges the Wiener Netze utility por
 | Rolle | Role | Data role code (V002/G001/G003) for energy flow type |
 | Restnetzbezug (G001) | Grid consumption | Electricity drawn from the public grid |
 | Eigendeckung (G003) | PV self-coverage | Electricity from rooftop PV consumed on-site |
+| Einspeisung (E002) | Feed-in | Electricity fed into the grid, measured on a separate feed-in meter |
+| Einspeisezählpunkt | Feed-in meter point | Meter point that measures feed-in; added as its own entry with meter type feed-in |
 | Gesamtverbrauch (V002) | Total consumption | Total electricity consumption regardless of source |
 | Messwert | Measurement value | Individual measurement -- counter reading or interval delta |
 | KEYCLOAK_IDENTITY | -- | Session cookie from log.wien Keycloak realm |
@@ -77,7 +82,8 @@ Smart home / energy management integration. Bridges the Wiener Netze utility por
 
 ## Design Decisions
 - Monotonically increasing cumulative sums continued from the last persisted sum in the recorder. Rationale: daily-resetting sums caused negative spikes with `stat_type: change`; monotonic sums work correctly with HA Energy Dashboard's diff-based consumption calculation.
-- Three sequential API calls per fetch (one per role). Roles are independent data streams from the same endpoint.
+- Three sequential API calls per fetch for a consumption meter (one per role), one for a feed-in meter. Roles are independent data streams from the same endpoint.
+- The meter type is chosen by the user, not detected. Rationale: detecting it needs a meter-list call on a different API (the `api.wstw.at` gateway) that this integration does not use. Role `E002` and the `descriptor.einheit` unit handling follow another integration (DarwinsBuddy/WienerNetzeSmartmeter) that calls the same `bewegungsdaten` endpoint; values in `WH` are converted to kWh.
 - KEYCLOAK_IDENTITY cookie as primary auth. Rationale: simpler than password flow.
 - Password auth scripts the Keycloak login form (authorization code + PKCE) instead of the resource owner password grant. Rationale: log.wien has Direct Access Grants disabled for the `wn-smartmeter` client, so the grant always fails with `unauthorized_client`. The login is identity-first (two-step): the username POST returns a password page with a fresh form action URL, and the theme is JS-rendered (Alpine.js), so the action URL is extracted from the page script, not a `<form>` tag.
 - Every config entry gets its own aiohttp session (and thus its own cookie jar), created in `async_setup_entry` and closed in `async_unload_entry`; the config and reauth flows validate on a throwaway session. Rationale: a session carries one cookie jar, and HA's shared client session would let one account's SSO session at log.wien leak into another account's login (and make credential validation accept anything while a session is active). The private jar also lets password-auth fetches reuse their own SSO session between runs instead of re-walking the login forms.

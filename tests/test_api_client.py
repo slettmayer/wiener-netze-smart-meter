@@ -178,6 +178,42 @@ async def test_fetch_bewegungsdaten_reports_invalid_json(hass, aioclient_mock):
         await _cookie_client(hass).fetch_bewegungsdaten("token", "1", "2", "V002", "von", "bis")
 
 
+def _bewegungsdaten(einheit: str | None, *werte: object) -> dict:
+    return {
+        "descriptor": {"rolle": "E002", "einheit": einheit},
+        "values": [{"wert": wert, "zeitpunktVon": "2026-09-19T22:00:00Z"} for wert in werte],
+    }
+
+
+@pytest.mark.parametrize(
+    ("einheit", "wert", "expected"),
+    [("WH", 250, 0.25), ("Wh", 250, 0.25), ("WH", "250", 0.25), ("KWH", 0.25, 0.25)],
+)
+async def test_fetch_bewegungsdaten_returns_kwh(hass, aioclient_mock, einheit, wert, expected):
+    aioclient_mock.get(BEWEGUNGSDATEN_ENDPOINT, json=_bewegungsdaten(einheit, wert))
+
+    values = await _cookie_client(hass).fetch_bewegungsdaten("token", "1", "2", "E002", "von", "bis")
+
+    assert [v["wert"] for v in values] == [expected]
+
+
+@pytest.mark.parametrize("descriptor", ["WH", ["WH"], None])
+async def test_fetch_bewegungsdaten_treats_a_malformed_descriptor_as_an_unknown_unit(hass, aioclient_mock, descriptor):
+    aioclient_mock.get(BEWEGUNGSDATEN_ENDPOINT, json={"descriptor": descriptor, "values": [{"wert": 0.25}]})
+
+    values = await _cookie_client(hass).fetch_bewegungsdaten("token", "1", "2", "E002", "von", "bis")
+
+    assert [v["wert"] for v in values] == [0.25]
+
+
+async def test_fetch_bewegungsdaten_passes_a_non_numeric_wh_value_through(hass, aioclient_mock):
+    aioclient_mock.get(BEWEGUNGSDATEN_ENDPOINT, json=_bewegungsdaten("WH", "n/a", None))
+
+    values = await _cookie_client(hass).fetch_bewegungsdaten("token", "1", "2", "E002", "von", "bis")
+
+    assert [v["wert"] for v in values] == ["n/a", None]
+
+
 async def test_fetch_meter_reading_reports_invalid_json(hass, aioclient_mock):
     aioclient_mock.get(f"{METER_READING_ENDPOINT}/1/2", text="not json", headers={"content-type": "text/html"})
 

@@ -5,18 +5,27 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 from homeassistant.components.recorder import get_instance
-from homeassistant.components.recorder.statistics import statistics_during_period
+from homeassistant.components.recorder.statistics import get_metadata, statistics_during_period
 from homeassistant.config_entries import SOURCE_REAUTH
 from homeassistant.exceptions import HomeAssistantError
 from pytest_homeassistant_custom_component.components.recorder.common import async_wait_recording_done
 
 from custom_components.wiener_netze_smart_meter.api_client import ApiError, AuthenticationError
-from custom_components.wiener_netze_smart_meter.const import CONF_ZAEHLPUNKTNUMMER, DOMAIN, ROLES, SERVICE_FETCH_DATA
+from custom_components.wiener_netze_smart_meter.const import (
+    CONF_METER_TYPE,
+    CONF_ZAEHLPUNKTNUMMER,
+    DOMAIN,
+    METER_TYPE_FEED_IN,
+    ROLES,
+    ROLLE_FEED_IN,
+    SERVICE_FETCH_DATA,
+)
 from custom_components.wiener_netze_smart_meter.coordinator import _aggregate_to_hourly, _parse_meter_reading
 
 from .conftest import COOKIE_DATA, make_entry
 
 TOTAL_STATISTIC_ID = f"{DOMAIN}:total_12345678"
+FEED_IN_STATISTIC_ID = f"{DOMAIN}:feed_in_12345678"
 
 # Local midnight in Vienna during summer time is 22:00 UTC, which is exactly how
 # the API reports it: `"zeitpunktVon": "2026-09-19T22:00:00Z"`.
@@ -45,8 +54,8 @@ def _fake_client(values: list[dict], readings: list[dict] | None = None, auth_er
     return client
 
 
-async def _setup(hass, client):
-    entry = make_entry(COOKIE_DATA)
+async def _setup(hass, client, data: dict = COOKIE_DATA):
+    entry = make_entry(data)
     entry.add_to_hass(hass)
     with patch("custom_components.wiener_netze_smart_meter.WienerNetzeApiClient", return_value=client):
         assert await hass.config_entries.async_setup(entry.entry_id)
@@ -60,19 +69,19 @@ async def _fetch(hass, days: int = 7):
     )
 
 
-async def _total_statistics(hass) -> list[dict]:
+async def _total_statistics(hass, statistic_id: str = TOTAL_STATISTIC_ID) -> list[dict]:
     await async_wait_recording_done(hass)
     stats = await get_instance(hass).async_add_executor_job(
         statistics_during_period,
         hass,
         LOCAL_MIDNIGHT - timedelta(days=1),
         LOCAL_MIDNIGHT + timedelta(days=1),
-        {TOTAL_STATISTIC_ID},
+        {statistic_id},
         "hour",
         None,
         {"state", "sum"},
     )
-    return stats.get(TOTAL_STATISTIC_ID, [])
+    return stats.get(statistic_id, [])
 
 
 def test_quarter_hours_are_summed_into_utc_hours():
@@ -121,6 +130,45 @@ async def test_fetch_imports_hourly_statistics(hass):
     assert response["success"] is True
     stats = await _total_statistics(hass)
     assert [s["state"] for s in stats] == [1.0, 1.0]
+
+
+def _requested_roles(client) -> list[str]:
+    return [call.args[3] for call in client.fetch_bewegungsdaten.await_args_list]
+
+
+async def test_a_feed_in_meter_imports_only_feed_in_data(hass):
+    client = _fake_client(_quarter_hours(LOCAL_MIDNIGHT, 8))
+    await _setup(hass, client, {**COOKIE_DATA, CONF_METER_TYPE: METER_TYPE_FEED_IN})
+
+    response = await _fetch(hass)
+
+    assert response["success"] is True
+    assert _requested_roles(client) == [ROLLE_FEED_IN]
+    stats = await _total_statistics(hass, FEED_IN_STATISTIC_ID)
+    assert [s["state"] for s in stats] == [1.0, 1.0]
+
+
+async def test_the_feed_in_statistic_has_a_readable_name(hass):
+    await _setup(
+        hass, _fake_client(_quarter_hours(LOCAL_MIDNIGHT, 4)), {**COOKIE_DATA, CONF_METER_TYPE: METER_TYPE_FEED_IN}
+    )
+
+    await _fetch(hass)
+    await async_wait_recording_done(hass)
+
+    metadata = await get_instance(hass).async_add_executor_job(
+        lambda: get_metadata(hass, statistic_ids={FEED_IN_STATISTIC_ID})
+    )
+    assert metadata[FEED_IN_STATISTIC_ID][1]["name"] == "Smart Meter Feed In"
+
+
+async def test_an_entry_without_a_meter_type_imports_consumption(hass):
+    client = _fake_client(_quarter_hours(LOCAL_MIDNIGHT, 8))
+    await _setup(hass, client)
+
+    await _fetch(hass)
+
+    assert _requested_roles(client) == ROLES
 
 
 async def test_cumulative_sum_keeps_growing_across_local_midnight(hass):

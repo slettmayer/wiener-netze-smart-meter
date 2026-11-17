@@ -17,14 +17,21 @@ METER_READING_ENDPOINT = f"{API_BASE_URL}/user/messwerte/meterReading"
 ROLLE_TOTAL = "V002"  # Gesamtverbrauch (total consumption)
 ROLLE_GRID = "G001"  # Restnetzbezug (grid consumption)
 ROLLE_PV = "G003"  # Eigendeckung (PV self-consumption)
+ROLLE_FEED_IN = "E002"  # Einspeisung (feed-in to the grid)
 
 ROLES = [ROLLE_TOTAL, ROLLE_GRID, ROLLE_PV]
+FEED_IN_ROLES = [ROLLE_FEED_IN]
 
 ROLE_NAMES = {
     ROLLE_TOTAL: "total",
     ROLLE_GRID: "grid",
     ROLLE_PV: "pv",
+    ROLLE_FEED_IN: "feed_in",
 }
+
+# Meter types
+METER_TYPE_CONSUMPTION = "consumption"
+METER_TYPE_FEED_IN = "feed_in"
 
 # Auth methods
 AUTH_METHOD_COOKIE = "cookie"
@@ -37,6 +44,7 @@ CONF_USERNAME = "username"
 CONF_PASSWORD = "password"
 CONF_GESCHAEFTSPARTNER = "geschaeftspartner"
 CONF_ZAEHLPUNKTNUMMER = "zaehlpunktnummer"
+CONF_METER_TYPE = "meter_type"
 
 # Defaults
 DEFAULT_FETCH_DAYS = 7

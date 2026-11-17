@@ -15,10 +15,13 @@ from .const import (
     CONF_AUTH_METHOD,
     CONF_GESCHAEFTSPARTNER,
     CONF_KEYCLOAK_IDENTITY,
+    CONF_METER_TYPE,
     CONF_PASSWORD,
     CONF_USERNAME,
     CONF_ZAEHLPUNKTNUMMER,
     DOMAIN,
+    METER_TYPE_CONSUMPTION,
+    METER_TYPE_FEED_IN,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -62,6 +65,7 @@ class WienerNetzeSmartMeterConfigFlow(ConfigFlow, domain=DOMAIN):
                 CONF_AUTH_METHOD: self._auth_method,
                 CONF_GESCHAEFTSPARTNER: user_input[CONF_GESCHAEFTSPARTNER],
                 CONF_ZAEHLPUNKTNUMMER: user_input[CONF_ZAEHLPUNKTNUMMER],
+                CONF_METER_TYPE: user_input[CONF_METER_TYPE],
                 **_credentials(self._auth_method, user_input),
             }
 
@@ -79,6 +83,12 @@ class WienerNetzeSmartMeterConfigFlow(ConfigFlow, domain=DOMAIN):
         schema_fields = _credentials_schema(self._auth_method)
         schema_fields[vol.Required(CONF_GESCHAEFTSPARTNER)] = str
         schema_fields[vol.Required(CONF_ZAEHLPUNKTNUMMER)] = str
+        schema_fields[vol.Required(CONF_METER_TYPE, default=METER_TYPE_CONSUMPTION)] = vol.In(
+            {
+                METER_TYPE_CONSUMPTION: "Consumption (Bezug)",
+                METER_TYPE_FEED_IN: "Feed-in (Einspeisung)",
+            }
+        )
 
         return self.async_show_form(
             step_id="credentials",

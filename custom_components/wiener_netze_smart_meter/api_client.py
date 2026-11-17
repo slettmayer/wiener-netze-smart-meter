@@ -286,7 +286,11 @@ class WienerNetzeApiClient:
             await self._release(resp)
             raise ApiError(f"Invalid bewegungsdaten response for {rolle}: {err}") from err
         values = data.get("values", [])
-        _LOGGER.debug("Fetched %d values for rolle=%s", len(values), rolle)
+        descriptor = data.get("descriptor")
+        einheit = descriptor.get("einheit") if isinstance(descriptor, dict) else None
+        _LOGGER.debug("Fetched %d values for rolle=%s einheit=%s", len(values), rolle, einheit)
+        if isinstance(einheit, str) and einheit.upper() == "WH":
+            values = [_wh_to_kwh(value) for value in values]
         return values
 
     async def fetch_meter_reading(
@@ -331,6 +335,18 @@ class WienerNetzeApiClient:
 
         _LOGGER.debug("Fetched %d meter readings", len(messwerte))
         return messwerte
+
+
+def _wh_to_kwh(value: dict) -> dict:
+    """Return the record with its Wh `wert` in kWh; a non-numeric `wert` is left for the coordinator to skip."""
+    wert = value.get("wert")
+    if isinstance(wert, bool):
+        return value
+    try:
+        kwh = float(wert) / 1000
+    except (TypeError, ValueError, OverflowError):
+        return value
+    return {**value, "wert": kwh}
 
 
 def _auth_params(code_challenge: str, prompt: str | None = None) -> dict:

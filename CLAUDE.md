@@ -16,7 +16,7 @@ Standard Home Assistant custom component with flat module layout under `custom_c
 - `config_flow.py` -- two-step UI config flow with live credential validation, plus a reauth flow for expired credentials
 - `const.py` -- all constants, URLs, role codes, config keys (single source of truth)
 
-Data flow: HA automation triggers `fetch_data` service -> coordinator authenticates -> fetches 3 roles sequentially + meter reading -> aggregates 15-min to hourly -> builds monotonically increasing sums -> inserts external statistics into HA recorder -> returns structured JSON status response.
+Data flow: HA automation triggers `fetch_data` service -> coordinator authenticates -> fetches its roles sequentially (3 for a consumption meter, 1 for a feed-in meter) + meter reading -> aggregates 15-min to hourly -> builds monotonically increasing sums -> inserts external statistics into HA recorder -> returns structured JSON status response.
 
 ## Tech Stack
 - Python 3.13+ at runtime (the Home Assistant 2025.11.0 floor in `hacs.json`); ruff targets `py312`; tests run on 3.14 (`.python-version`)
@@ -35,7 +35,7 @@ Data flow: HA automation triggers `fetch_data` service -> coordinator authentica
 - See [CONVENTIONS.md](docs/tech/CONVENTIONS.md) for full detail
 
 ## Business Domain
-Austrian smart meter energy integration. Fetches 15-minute Bewegungsdaten (consumption records) from Wiener Netze for three energy roles -- Total (V002), Grid/Restnetzbezug (G001), PV/Eigendeckung (G003) -- aggregates to hourly statistics with monotonically increasing cumulative sums for the HA Energy Dashboard. See [Domain Overview](docs/domain/OVERVIEW.md) for terminology and entity details.
+Austrian smart meter energy integration. Fetches 15-minute Bewegungsdaten (consumption records) from Wiener Netze for three energy roles -- Total (V002), Grid/Restnetzbezug (G001), PV/Eigendeckung (G003) -- or, for a feed-in meter (meter type chosen per entry), Einspeisung (E002) -- aggregates to hourly statistics with monotonically increasing cumulative sums for the HA Energy Dashboard. See [Domain Overview](docs/domain/OVERVIEW.md) for terminology and entity details.
 
 ## CI/CD
 - **Validate**: ruff lint+format, pytest, hassfest, HACS validation, release-archive build + gate job on every push to `main` and PR (`.github/workflows/validate.yml`)

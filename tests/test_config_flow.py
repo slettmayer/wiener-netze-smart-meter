@@ -13,10 +13,13 @@ from custom_components.wiener_netze_smart_meter.const import (
     CONF_AUTH_METHOD,
     CONF_GESCHAEFTSPARTNER,
     CONF_KEYCLOAK_IDENTITY,
+    CONF_METER_TYPE,
     CONF_PASSWORD,
     CONF_USERNAME,
     CONF_ZAEHLPUNKTNUMMER,
     DOMAIN,
+    METER_TYPE_CONSUMPTION,
+    METER_TYPE_FEED_IN,
 )
 
 from .conftest import COOKIE_DATA, PASSWORD_DATA, ZAEHLPUNKTNUMMER, make_entry
@@ -62,7 +65,12 @@ async def test_cookie_flow_creates_entry(hass):
 
     assert result["type"] is FlowResultType.CREATE_ENTRY
     assert result["title"] == "Smart Meter 12345678"
-    assert result["data"] == {CONF_AUTH_METHOD: AUTH_METHOD_COOKIE, CONF_KEYCLOAK_IDENTITY: "COOKIE", **METER_INPUT}
+    assert result["data"] == {
+        CONF_AUTH_METHOD: AUTH_METHOD_COOKIE,
+        CONF_KEYCLOAK_IDENTITY: "COOKIE",
+        CONF_METER_TYPE: METER_TYPE_CONSUMPTION,
+        **METER_INPUT,
+    }
     assert result["result"].unique_id == ZAEHLPUNKTNUMMER
 
 
@@ -79,8 +87,22 @@ async def test_password_flow_creates_entry(hass):
         CONF_AUTH_METHOD: AUTH_METHOD_PASSWORD,
         CONF_USERNAME: "user@example.invalid",
         CONF_PASSWORD: "pw",
+        CONF_METER_TYPE: METER_TYPE_CONSUMPTION,
         **METER_INPUT,
     }
+
+
+async def test_flow_stores_a_feed_in_meter(hass):
+    result = await _start_user_flow(hass, AUTH_METHOD_COOKIE)
+
+    with _patch_authenticate(), _patch_setup():
+        result = await hass.config_entries.flow.async_configure(
+            result["flow_id"],
+            {CONF_KEYCLOAK_IDENTITY: "COOKIE", CONF_METER_TYPE: METER_TYPE_FEED_IN, **METER_INPUT},
+        )
+
+    assert result["type"] is FlowResultType.CREATE_ENTRY
+    assert result["data"][CONF_METER_TYPE] == METER_TYPE_FEED_IN
 
 
 @pytest.mark.parametrize(
