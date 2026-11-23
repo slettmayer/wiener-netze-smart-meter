@@ -27,7 +27,7 @@ PLATFORMS = ["sensor"]
 
 SERVICE_SCHEMA = vol.Schema(
     {
-        vol.Optional(SERVICE_ATTR_DAYS, default=DEFAULT_FETCH_DAYS): vol.All(int, vol.Range(min=1, max=365)),
+        vol.Optional(SERVICE_ATTR_DAYS, default=DEFAULT_FETCH_DAYS): vol.All(int, vol.Range(min=1, max=1095)),
     }
 )
 

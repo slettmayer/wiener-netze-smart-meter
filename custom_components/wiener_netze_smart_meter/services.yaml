@@ -11,6 +11,6 @@ fetch_data:
       selector:
         number:
           min: 1
-          max: 365
+          max: 1095
           mode: box
           unit_of_measurement: days
