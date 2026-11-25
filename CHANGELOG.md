@@ -1,5 +1,10 @@
 # Changelog
 
+## 2.9.0
+
+- Add: the `fetch_data` service accepts up to 1095 days (3 years), the full history the Wiener Netze Smart Meter portal keeps; the limit was 365 days
+- Thanks to @Bungeefan for raising the limit ([#52](https://github.com/slettmayer/wiener-netze-smart-meter/pull/52))!
+
 ## 2.8.0
 
 - Add: feed-in meters (Einspeisezählpunkt). Choose **Feed-in** as the meter type when adding the meter; the integration then imports the energy fed into the grid as the statistic `wiener_netze_smart_meter:feed_in_*`, which the Energy Dashboard can use as *Return to grid* ([#47](https://github.com/slettmayer/wiener-netze-smart-meter/issues/47))
