@@ -50,7 +50,7 @@ The integration does **not** poll automatically. Use the service action to fetch
 
 | Parameter | Default | Range | Description |
 |-----------|---------|-------|-------------|
-| `days`    | 7       | 1–365 | Number of days in the past to fetch data for |
+| `days`    | 7       | 1–1095 | Number of days in the past to fetch data for |
 
 ### Daily automation example
 
